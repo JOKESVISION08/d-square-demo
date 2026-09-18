@@ -1,0 +1,301 @@
+{
+  "project": "D-SQUARE 2.0 Historical Satellite Earth-Observation Database",
+  "region_focus": "India (Uttarakhand Himalayan Region, Western Ghats, Northeast)",
+  "reference_coordinates": {
+    "latitude": 30.0668,
+    "longitude": 79.0193,
+    "location_name": "Almora / Chamoli Belt, Uttarakhand, India"
+  },
+  "historical_events": [
+    {
+      "event_id": "FF_UTT_2016_05",
+      "disaster_type": "Forest_Fire",
+      "event_name": "May 2016 Uttarakhand Forest Fires",
+      "date": "2016-05-02",
+      "location": "Almora, Uttarakhand",
+      "coordinates": {"latitude": 30.0668, "longitude": 79.0193},
+      "satellite": "Landsat-8",
+      "sensor": "OLI / TIRS",
+      "resolution_m": 30,
+      "pixel_values": {
+        "red": 0.28,
+        "green": 0.22,
+        "blue": 0.19,
+        "nir": 0.16,
+        "swir": 0.34,
+        "thermal": 46.8
+      },
+      "indices": {
+        "ndvi": 0.2273,
+        "ndwi": -0.1579,
+        "nbr": -0.3600,
+        "lst": 46.8,
+        "aod": 0.85
+      },
+      "disaster_severity": "CRITICAL",
+      "burnt_area_hectares": 3500,
+      "cloud_cover_percent": 2.1
+    },
+    {
+      "event_id": "FF_UTT_2021_05",
+      "disaster_type": "Forest_Fire",
+      "event_name": "April-May 2021 Uttarakhand Forest Fires",
+      "date": "2021-05-15",
+      "location": "Almora / Garhwal, Uttarakhand",
+      "coordinates": {"latitude": 30.0668, "longitude": 79.0193},
+      "satellite": "Sentinel-2",
+      "sensor": "MSI",
+      "resolution_m": 10,
+      "pixel_values": {
+        "red": 0.25,
+        "green": 0.20,
+        "blue": 0.18,
+        "nir": 0.15,
+        "swir": 0.30,
+        "thermal": 45.5
+      },
+      "indices": {
+        "ndvi": -0.2500,
+        "ndwi": -0.1429,
+        "nbr": -0.3333,
+        "lst": 45.5,
+        "aod": 0.78
+      },
+      "disaster_severity": "HIGH",
+      "burnt_area_hectares": 1250,
+      "cloud_cover_percent": 1.5
+    },
+    {
+      "event_id": "FF_UTT_2021_11",
+      "disaster_type": "Forest_Fire",
+      "event_name": "November 2021 Post-Monsoon Dry Fires",
+      "date": "2021-11-10",
+      "location": "Pauri Garhwal, Uttarakhand",
+      "coordinates": {"latitude": 30.1500, "longitude": 78.8000},
+      "satellite": "Resourcesat-2",
+      "sensor": "LISS-III",
+      "resolution_m": 23.5,
+      "pixel_values": {
+        "red": 0.24,
+        "green": 0.19,
+        "blue": 0.17,
+        "nir": 0.18,
+        "swir": 0.28,
+        "thermal": 39.2
+      },
+      "indices": {
+        "ndvi": 0.2857,
+        "ndwi": -0.0270,
+        "nbr": -0.2174,
+        "lst": 39.2,
+        "aod": 0.55
+      },
+      "disaster_severity": "MEDIUM",
+      "burnt_area_hectares": 620,
+      "cloud_cover_percent": 0.8
+    },
+    {
+      "event_id": "FF_UTT_2022_04",
+      "disaster_type": "Forest_Fire",
+      "event_name": "April 2022 Uttarakhand Fires",
+      "date": "2022-04-20",
+      "location": "Almora / Nainital Belt",
+      "coordinates": {"latitude": 30.0668, "longitude": 79.0193},
+      "satellite": "Sentinel-2",
+      "sensor": "MSI",
+      "resolution_m": 10,
+      "pixel_values": {
+        "red": 0.28,
+        "green": 0.22,
+        "blue": 0.19,
+        "nir": 0.17,
+        "swir": 0.32,
+        "thermal": 43.2
+      },
+      "indices": {
+        "ndvi": -0.2444,
+        "ndwi": -0.1282,
+        "nbr": -0.3061,
+        "lst": 43.2,
+        "aod": 0.72
+      },
+      "disaster_severity": "HIGH",
+      "burnt_area_hectares": 850,
+      "cloud_cover_percent": 3.0
+    },
+    {
+      "event_id": "FL_KED_2013_06",
+      "disaster_type": "Flood",
+      "event_name": "June 2013 Kedarnath Flash Floods",
+      "date": "2013-06-17",
+      "location": "Kedarnath / Mandakini Valley",
+      "coordinates": {"latitude": 30.7346, "longitude": 79.0669},
+      "satellite": "Resourcesat-2",
+      "sensor": "AWiFS",
+      "resolution_m": 56,
+      "pixel_values": {
+        "red": 0.10,
+        "green": 0.35,
+        "blue": 0.78,
+        "nir": 0.05,
+        "swir": 0.06,
+        "thermal": 18.5
+      },
+      "indices": {
+        "ndvi": -0.3333,
+        "ndwi": 0.7500,
+        "nbr": -0.0909,
+        "lst": 18.5,
+        "aod": 0.22
+      },
+      "disaster_severity": "CRITICAL",
+      "flooded_area_sq_km": 420,
+      "cloud_cover_percent": 12.4
+    },
+    {
+      "event_id": "FL_CHE_2015_12",
+      "disaster_type": "Flood",
+      "event_name": "November-December 2015 Chennai Floods",
+      "date": "2015-12-02",
+      "location": "Chennai, Tamil Nadu",
+      "coordinates": {"latitude": 13.0827, "longitude": 80.2707},
+      "satellite": "RISAT-1",
+      "sensor": "C-band SAR",
+      "resolution_m": 25,
+      "pixel_values": {
+        "red": 0.08,
+        "green": 0.38,
+        "blue": 0.82,
+        "nir": 0.04,
+        "swir": 0.05,
+        "thermal": 22.0
+      },
+      "indices": {
+        "ndvi": -0.3333,
+        "ndwi": 0.8095,
+        "nbr": -0.1111,
+        "lst": 22.0,
+        "aod": 0.18
+      },
+      "disaster_severity": "CRITICAL",
+      "flooded_area_sq_km": 680,
+      "cloud_cover_percent": 25.0
+    },
+    {
+      "event_id": "FL_KER_2018_08",
+      "disaster_type": "Flood",
+      "event_name": "August 2018 Kerala Floods",
+      "date": "2018-08-16",
+      "location": "Idukki / Wayanad, Kerala",
+      "coordinates": {"latitude": 9.8500, "longitude": 76.9667},
+      "satellite": "Sentinel-1",
+      "sensor": "C-band SAR",
+      "resolution_m": 10,
+      "pixel_values": {
+        "red": 0.11,
+        "green": 0.36,
+        "blue": 0.80,
+        "nir": 0.06,
+        "swir": 0.07,
+        "thermal": 21.5
+      },
+      "indices": {
+        "ndvi": -0.2941,
+        "ndwi": 0.7143,
+        "nbr": -0.0769,
+        "lst": 21.5,
+        "aod": 0.20
+      },
+      "disaster_severity": "CRITICAL",
+      "flooded_area_sq_km": 1150,
+      "cloud_cover_percent": 18.0
+    },
+    {
+      "event_id": "FL_ASS_2022_07",
+      "disaster_type": "Flood",
+      "event_name": "July 2022 Assam Brahmaputra Floods",
+      "date": "2022-07-05",
+      "location": "Silchar / Cachar, Assam",
+      "coordinates": {"latitude": 24.8333, "longitude": 92.7667},
+      "satellite": "Sentinel-2",
+      "sensor": "MSI",
+      "resolution_m": 10,
+      "pixel_values": {
+        "red": 0.12,
+        "green": 0.34,
+        "blue": 0.75,
+        "nir": 0.07,
+        "swir": 0.08,
+        "thermal": 23.0
+      },
+      "indices": {
+        "ndvi": -0.2632,
+        "ndwi": 0.6585,
+        "nbr": -0.0667,
+        "lst": 23.0,
+        "aod": 0.25
+      },
+      "disaster_severity": "HIGH",
+      "flooded_area_sq_km": 890,
+      "cloud_cover_percent": 14.2
+    },
+    {
+      "event_id": "LS_CHA_2021_02",
+      "disaster_type": "Landslide",
+      "event_name": "February 2021 Chamoli Glacial Outburst & Landslide",
+      "date": "2021-02-07",
+      "location": "Chamoli / Raini Village, Uttarakhand",
+      "coordinates": {"latitude": 30.3700, "longitude": 79.7300},
+      "satellite": "Sentinel-2",
+      "sensor": "MSI",
+      "resolution_m": 10,
+      "pixel_values": {
+        "red": 0.35,
+        "green": 0.32,
+        "blue": 0.28,
+        "nir": 0.30,
+        "swir": 0.26,
+        "thermal": 16.2
+      },
+      "indices": {
+        "ndvi": -0.0769,
+        "ndwi": 0.0323,
+        "nbr": 0.0714,
+        "lst": 16.2,
+        "aod": 0.35
+      },
+      "disaster_severity": "CRITICAL",
+      "debris_volume_m3": 27000000,
+      "cloud_cover_percent": 4.5
+    },
+    {
+      "event_id": "LS_HP_2022_07",
+      "disaster_type": "Landslide",
+      "event_name": "July 2022 Himachal Pradesh Landslides",
+      "date": "2022-07-28",
+      "location": "Kullu / Mandi, Himachal Pradesh",
+      "coordinates": {"latitude": 31.9568, "longitude": 77.1095},
+      "satellite": "Landsat-8",
+      "sensor": "OLI",
+      "resolution_m": 30,
+      "pixel_values": {
+        "red": 0.33,
+        "green": 0.30,
+        "blue": 0.26,
+        "nir": 0.32,
+        "swir": 0.25,
+        "thermal": 19.8
+      },
+      "indices": {
+        "ndvi": -0.0156,
+        "ndwi": -0.0323,
+        "nbr": 0.1228,
+        "lst": 19.8,
+        "aod": 0.30
+      },
+      "disaster_severity": "HIGH",
+      "debris_volume_m3": 1200000,
+      "cloud_cover_percent": 5.0
+    }
+  ]
+}

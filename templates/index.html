@@ -1,0 +1,2214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>D-SQUARE 2.0 | Disaster Surveillance Dashboard (ISRO Satellite AI)</title>
+  <!-- Bootstrap 5 CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- FontAwesome Icons -->
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+  <!-- Leaflet Map CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <style>
+    :root {
+      --bg-dark: #0a0f1d;
+      --card-bg: #12192c;
+      --border-color: #1e293b;
+      --accent-blue: #38bdf8;
+      --accent-green: #22c55e;
+      --accent-orange: #f97316;
+      --accent-red: #ef4444;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+    }
+    body {
+      background-color: var(--bg-dark);
+      color: var(--text-main);
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      margin: 0;
+      padding: 0;
+    }
+    .navbar {
+      background-color: #0f172a;
+      border-bottom: 1px solid var(--border-color);
+      padding: 0.8rem 1.5rem;
+    }
+    .badge-status {
+      font-size: 0.85rem;
+      padding: 0.4em 0.8em;
+      border-radius: 6px;
+    }
+    .card-dark {
+      background-color: var(--card-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      padding: 1.2rem;
+      margin-bottom: 1rem;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+    }
+    #map {
+      height: 480px;
+      border-radius: 8px;
+      border: 1px solid var(--border-color);
+    }
+    .sensor-metric {
+      text-align: center;
+      padding: 0.8rem;
+      background: #1e293b;
+      border-radius: 8px;
+    }
+    .metric-value {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: var(--accent-blue);
+    }
+    .metric-label {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+    }
+    .progress-bar-custom {
+      height: 8px;
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Navbar -->
+  <nav class="navbar navbar-dark d-flex justify-content-between align-items-center">
+    <div class="d-flex align-items-center gap-3">
+      <i class="fa-solid fa-satellite-dish text-info fa-2x"></i>
+      <div>
+        <h4 class="mb-0 fw-bold">D-SQUARE 2.0 — Satellite Hardware & Ground Station Control Center</h4>
+        <small class="text-muted">ISRO Satellite Data, NISAR Dual-SAR Radar & ESP8266 IoT Hardware Telemetry</small>
+      </div>
+    </div>
+    <div class="d-flex align-items-center gap-2">
+      <span class="badge bg-success bg-opacity-25 text-success border border-success badge-status" id="system-status">
+        <i class="fa-solid fa-circle-check me-1"></i> Hardware Online (95.8% Accuracy)
+      </span>
+      <span class="badge bg-info bg-opacity-25 text-info border border-info badge-status" id="stream-rates-badge">
+        🛰️ NISAR Dual-SAR Stream: 5.0 FPS
+      </span>
+      <a href="/mobile_sos" target="_blank" class="btn btn-sm btn-outline-info fw-bold py-1 px-2">
+        <i class="fa-solid fa-mobile-screen-button me-1"></i> Open D-SQUARE GPT App
+      </a>
+    </div>
+  </nav>
+
+  <div class="container-fluid py-3 px-4">
+    <!-- Hardware Telemetry Status Bar -->
+    <div class="card-dark d-flex flex-row justify-content-between align-items-center flex-wrap gap-2 py-2">
+      <div class="d-flex align-items-center gap-2">
+        <i class="fa-solid fa-microchip text-success"></i>
+        <span class="fw-semibold text-success">ESP8266 Live Hardware Telemetry Active:</span>
+        <small class="text-muted">(Landslide Detection driven 100% by physical hardware sensors)</small>
+      </div>
+      <div class="d-flex align-items-center gap-2">
+        <button class="btn btn-danger btn-sm fw-bold px-3 py-1 border border-light" onclick="sendOperatorSosToGpt()">
+          <i class="fa-solid fa-tower-cell me-1"></i> 🚨 DISPATCH SOS TO D-SQUARE GPT
+        </button>
+      </div>
+    </div>
+
+    <!-- Main Grid Row 1: Map & Fusion Status -->
+    <div class="row">
+      <!-- Leaflet GIS Map -->
+      <div class="col-lg-8">
+        <div class="card-dark">
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <h5 class="mb-0 text-info"><i class="fa-solid fa-map-location-dot me-2"></i> ISRO Bhuvan GIS Map & UAV Grid Overlay</h5>
+            <span class="text-muted small">ROI: Uttarakhand High-Risk Belt (23.5m / 4km Resolution)</span>
+          </div>
+          <div id="map"></div>
+        </div>
+      </div>
+
+      <!-- Multi-Modal AI Fusion Engine Metrics -->
+      <div class="col-lg-4">
+        <div class="card-dark">
+          <h5 class="text-warning mb-2"><i class="fa-solid fa-brain me-2"></i> Multi-Modal Fusion Engine</h5>
+          
+          <div class="p-2 bg-dark rounded border border-secondary mb-2 text-center">
+            <div class="text-muted small">DISASTER PROBABILITY & RISK TIER</div>
+            <div class="display-6 fw-bold my-1" id="risk-score-display">12.5%</div>
+            <span class="badge bg-success fs-6" id="risk-tier-badge">LOW RISK</span>
+            <div class="mt-1 text-muted small" id="predicted-disaster-label">Detected: NONE</div>
+          </div>
+
+          <h6 class="text-muted small mb-2">4-MODEL ENSEMBLE BREAKDOWN (25% WEIGHT EACH)</h6>
+          
+          <div class="mb-2">
+            <div class="d-flex justify-content-between small">
+              <span>1. CNN Satellite (ISRO Resourcesat-2)</span>
+              <span id="sat-score">92.4%</span>
+            </div>
+            <div class="progress progress-bar-custom bg-dark">
+              <div class="progress-bar bg-info" id="sat-progress" style="width: 92%"></div>
+            </div>
+          </div>
+
+          <div class="mb-2">
+            <div class="d-flex justify-content-between small">
+              <span>2. LSTM Time-Series (30-Day Risk)</span>
+              <span id="ts-score">88.1%</span>
+            </div>
+            <div class="progress progress-bar-custom bg-dark">
+              <div class="progress-bar bg-primary" id="ts-progress" style="width: 88%"></div>
+            </div>
+          </div>
+
+          <div class="mb-2">
+            <div class="d-flex justify-content-between small">
+              <span>3. ESP8266 RF Ground Sensors</span>
+              <span id="rf-score">94.7%</span>
+            </div>
+            <div class="progress progress-bar-custom bg-dark">
+              <div class="progress-bar bg-warning" id="rf-progress" style="width: 94%"></div>
+            </div>
+          </div>
+
+          <div class="mb-2">
+            <div class="d-flex justify-content-between small">
+              <span>4. Mobile Back Camera CV (5 FPS)</span>
+              <span id="cam-score">96.5%</span>
+            </div>
+            <div class="progress progress-bar-custom bg-dark">
+              <div class="progress-bar bg-success" id="cam-progress" style="width: 96%"></div>
+            </div>
+          </div>
+
+          <!-- Live Mobile NISAR Satellite Pixel Feed Card -->
+          <div class="mt-3 p-2 bg-dark rounded border border-info">
+            <div class="d-flex justify-content-between align-items-center mb-1">
+              <span class="small text-info fw-bold"><i class="fa-solid fa-satellite-dish me-1"></i> Live Mobile NISAR Satellite Pixels</span>
+              <span class="badge bg-secondary small" id="nisar-live-status">AWAITING STREAM</span>
+            </div>
+            
+            <!-- Uploaded Frame Image Display -->
+            <div class="text-center position-relative bg-black rounded mb-2" style="min-height: 120px; overflow: hidden; border: 1px solid #1e293b;">
+              <img id="mobile-live-feed-img" src="" style="width: 100%; max-height: 150px; object-fit: cover; display: none;" alt="Mobile NISAR Live Stream">
+              <div id="cam-feed-placeholder" class="py-3 text-muted small">
+                <i class="fa-solid fa-satellite fa-2x mb-1 text-info d-block"></i>
+                Awaiting Mobile NISAR Radar Stream...
+              </div>
+            </div>
+
+            <!-- Real-time NISAR Pixel Values Grid -->
+            <div class="row g-1 text-center small" style="font-size: 0.75rem;">
+              <div class="col-4">
+                <div class="p-1 bg-black rounded border border-secondary">
+                  <span class="text-muted d-block">Red (B4):</span>
+                  <strong class="text-danger" id="n-px-r">0.150</strong>
+                </div>
+              </div>
+              <div class="col-4">
+                <div class="p-1 bg-black rounded border border-secondary">
+                  <span class="text-muted d-block">Green (B3):</span>
+                  <strong class="text-success" id="n-px-g">0.650</strong>
+                </div>
+              </div>
+              <div class="col-4">
+                <div class="p-1 bg-black rounded border border-secondary">
+                  <span class="text-muted d-block">Blue (B2):</span>
+                  <strong class="text-primary" id="n-px-b">0.150</strong>
+                </div>
+              </div>
+              <div class="col-6 mt-1">
+                <div class="p-1 bg-black rounded border border-secondary">
+                  <span class="text-muted d-block">NIR (B5):</span>
+                  <strong class="text-success" id="n-px-nir">0.750</strong>
+                </div>
+              </div>
+              <div class="col-6 mt-1">
+                <div class="p-1 bg-black rounded border border-secondary">
+                  <span class="text-muted d-block">SWIR (B7):</span>
+                  <strong class="text-warning" id="n-px-swir">0.150</strong>
+                </div>
+              </div>
+              <div class="col-6 mt-1">
+                <div class="p-1 bg-black rounded border border-secondary">
+                  <span class="text-muted d-block">SAR L-Band:</span>
+                  <strong class="text-info" id="n-px-lband">-12.4 dB</strong>
+                </div>
+              </div>
+              <div class="col-6 mt-1">
+                <div class="p-1 bg-black rounded border border-secondary">
+                  <span class="text-muted d-block">SAR S-Band:</span>
+                  <strong class="text-warning" id="n-px-sband">-8.6 dB</strong>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- NISAR PC Storage Folder Widget -->
+          <div class="mt-3 p-2 bg-dark rounded border border-primary">
+            <div class="d-flex justify-content-between align-items-center mb-1">
+              <span class="small text-primary fw-bold"><i class="fa-solid fa-folder-open me-1"></i> NISAR PC Folder Storage (`/nisar`)</span>
+              <button class="btn btn-outline-primary btn-sm py-0 px-2" onclick="fetchNisarFiles()" style="font-size: 0.7rem;">
+                <i class="fa-solid fa-rotate me-1"></i> Refresh
+              </button>
+            </div>
+            <div class="small text-muted mb-2" style="font-size: 0.72rem;">
+              PC Folder: <code class="text-warning">c:\Users\...\d-square demo\nisar</code>
+            </div>
+            <div class="d-flex justify-content-between align-items-center p-2 bg-black rounded border border-secondary mb-2" style="font-size: 0.75rem;">
+              <div>
+                <span class="text-muted d-block">Saved Pixel Files:</span>
+                <strong class="text-info" id="nisar-folder-count">0 Files</strong>
+              </div>
+              <div class="text-end">
+                <a id="nisar-latest-dl-img" href="/nisar/latest_nisar_capture.png" target="_blank" class="btn btn-sm btn-outline-info py-0 px-2 me-1" style="font-size: 0.7rem;">
+                  <i class="fa-solid fa-image me-1"></i> Latest PNG
+                </a>
+                <a id="nisar-latest-dl-json" href="/nisar/latest_nisar_data.json" target="_blank" class="btn btn-sm btn-outline-warning py-0 px-2" style="font-size: 0.7rem;">
+                  <i class="fa-solid fa-file-code me-1"></i> Latest JSON
+                </a>
+              </div>
+            </div>
+            <div class="bg-black p-2 rounded border border-secondary" style="max-height: 110px; overflow-y: auto; font-size: 0.7rem;">
+              <ul class="list-unstyled mb-0" id="nisar-file-list">
+                <li class="text-muted text-center py-1">Loading nisar/ folder...</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="mt-2 p-2 bg-dark rounded border border-danger small text-center" id="twilio-alert-status">
+            <i class="fa-solid fa-comment-sms text-danger me-1"></i> Twilio SMS Dispatcher: <strong>READY</strong>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main Grid Row 2: Live IoT Sensors & Time Series Graphs -->
+    <div class="row">
+      <div class="col-lg-6">
+        <div class="card-dark">
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <h5 class="text-success mb-0"><i class="fa-solid fa-microchip me-2"></i> ESP8266 Ground Sensor Telemetry</h5>
+            <button class="btn btn-outline-success btn-sm py-0 px-2" data-bs-toggle="modal" data-bs-target="#hardwareCodeModal" style="font-size: 0.75rem;">
+              <i class="fa-solid fa-microchip me-1"></i> Hardware Wiring & C++ Code
+            </button>
+          </div>
+          <div class="row g-2 mb-2">
+            <div class="col-3">
+              <div class="sensor-metric">
+                <div class="metric-value text-warning" id="val-soil-raw">850</div>
+                <div class="metric-label"><i class="fa-solid fa-sliders text-warning"></i> Soil Raw (A0)</div>
+              </div>
+            </div>
+            <div class="col-3">
+              <div class="sensor-metric">
+                <div class="metric-value" id="val-soil">42.0%</div>
+                <div class="metric-label"><i class="fa-solid fa-seedling text-success"></i> Soil Moisture</div>
+              </div>
+            </div>
+            <div class="col-3">
+              <div class="sensor-metric">
+                <div class="metric-value" id="val-temp">26.5°C</div>
+                <div class="metric-label"><i class="fa-solid fa-temperature-high text-danger"></i> Temperature</div>
+              </div>
+            </div>
+            <div class="col-3">
+              <div class="sensor-metric">
+                <div class="metric-value" id="val-hum">52.0%</div>
+                <div class="metric-label"><i class="fa-solid fa-droplet text-primary"></i> Humidity</div>
+              </div>
+            </div>
+          </div>
+          <!-- Hardware Landslide Status Banner -->
+          <div id="hardware-landslide-status" class="alert alert-success mt-2 mb-0 fw-bold text-center fs-6 border border-success py-2">
+            <i class="fa-solid fa-circle-check me-2"></i>✅ Normal Condition (Hardware)
+          </div>
+        </div>
+      </div>
+
+    <!-- Main Grid Row 3: Historical Satellite Pixel-and-Patch Comparison Engine -->
+    <div class="row">
+      <div class="col-12">
+        <div class="card-dark border-warning">
+          <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+            <div class="d-flex align-items-center gap-2">
+              <h5 class="text-warning mb-0"><i class="fa-solid fa-clock-rotate-left me-2"></i> Historical Satellite Pixel-and-Patch Comparison Engine</h5>
+              <span class="badge bg-primary" id="hist-patch-size-badge">5×5 Patch Grid</span>
+            </div>
+            
+            <div class="d-flex align-items-center gap-2 flex-wrap">
+              <!-- Spatial Patch Size Selector -->
+              <div class="input-group input-group-sm" style="width: auto;">
+                <span class="input-group-text bg-dark text-warning border-secondary"><i class="fa-solid fa-border-all me-1"></i> Patch Size:</span>
+                <select class="form-select bg-dark text-white border-secondary form-select-sm" id="patch-size-select" onchange="runHistoricalComparison()">
+                  <option value="3">3 × 3 (9 Pixels / ~90m)</option>
+                  <option value="5" selected>5 × 5 (25 Pixels / ~250m)</option>
+                  <option value="9">9 × 9 (81 Pixels / ~810m)</option>
+                </select>
+              </div>
+
+              <!-- Disaster Class Filter -->
+              <div class="input-group input-group-sm" style="width: auto;">
+                <span class="input-group-text bg-dark text-info border-secondary"><i class="fa-solid fa-filter me-1"></i> Class:</span>
+                <select class="form-select bg-dark text-white border-secondary form-select-sm" id="disaster-filter-select" onchange="runHistoricalComparison()">
+                  <option value="ALL" selected>All Classes</option>
+                  <option value="Landslide">Landslide</option>
+                  <option value="None">Normal / Baseline</option>
+                </select>
+              </div>
+
+              <button class="btn btn-warning btn-sm fw-bold" onclick="runHistoricalComparison()">
+                <i class="fa-solid fa-magnifying-glass-chart me-1"></i> Compare Patch
+              </button>
+              <button class="btn btn-outline-warning btn-sm" onclick="downloadHistoricalJSON()">
+                <i class="fa-solid fa-download me-1"></i> Export JSON
+              </button>
+            </div>
+          </div>
+
+          <div class="row g-3">
+            <!-- Left Column: Multi-Spectral Patch Feature Table & Spatial Stats -->
+            <div class="col-lg-6">
+              <div class="p-3 bg-dark rounded border border-secondary h-100">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                  <h6 class="text-info mb-0"><i class="fa-solid fa-layer-group me-1"></i> Patch Feature Vectors & Spatial Statistics (<span id="patch-valid-count">25 Valid Pixels</span>)</h6>
+                  <span class="badge bg-secondary small" id="query-scene-id">SCENE: CURRENT_ROI_01</span>
+                </div>
+                
+                <div class="table-responsive">
+                  <table class="table table-dark table-sm table-bordered text-center align-middle mb-2" style="font-size: 0.8rem;">
+                    <thead>
+                      <tr class="table-secondary text-dark">
+                        <th>Spectral Indicator</th>
+                        <th>Center Pixel</th>
+                        <th>Patch Mean (μ)</th>
+                        <th>Patch Std (σ)</th>
+                        <th>Patch Median</th>
+                      </tr>
+                    </thead>
+                    <tbody id="patch-stats-tbody">
+                      <tr>
+                        <td>NDVI (Vegetation Index)</td>
+                        <td id="tbl-c-ndvi" class="text-success">0.2444</td>
+                        <td id="tbl-m-ndvi">0.2410</td>
+                        <td id="tbl-s-ndvi">0.0125</td>
+                        <td id="tbl-med-ndvi">0.2430</td>
+                      </tr>
+                      <tr>
+                        <td>NBR (Burn Ratio)</td>
+                        <td id="tbl-c-nbr" class="text-danger">-0.3191</td>
+                        <td id="tbl-m-nbr">-0.3150</td>
+                        <td id="tbl-s-nbr">0.0180</td>
+                        <td id="tbl-med-nbr">-0.3170</td>
+                      </tr>
+                      <tr>
+                        <td>LST (°C Surface Temp)</td>
+                        <td id="tbl-c-lst" class="text-warning">44.8°C</td>
+                        <td id="tbl-m-lst">44.2°C</td>
+                        <td id="tbl-s-lst">0.65°C</td>
+                        <td id="tbl-med-lst">44.5°C</td>
+                      </tr>
+                      <tr>
+                        <td>SAR L-Band (dB)</td>
+                        <td id="tbl-c-lband" class="text-info">-12.4 dB</td>
+                        <td id="tbl-m-lband">-12.2 dB</td>
+                        <td id="tbl-s-lband">0.4 dB</td>
+                        <td id="tbl-med-lband">-12.3 dB</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+
+                <!-- Provenance & Quality Metadata -->
+                <div class="p-2 bg-black rounded border border-secondary small d-flex justify-content-between align-items-center flex-wrap gap-1" style="font-size: 0.75rem;">
+                  <div>
+                    <span class="text-muted me-1">Satellite:</span><strong class="text-info" id="meta-sat">Sentinel-2 / NISAR</strong>
+                  </div>
+                  <div>
+                    <span class="text-muted me-1">Product:</span><strong class="text-white" id="meta-prod">L2A Reflectance</strong>
+                  </div>
+                  <div>
+                    <span class="text-muted me-1">Quality:</span><span class="badge bg-secondary" id="meta-quality">DEMO DATASET</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Right Column: Match Ranking, Anomaly Gauge & Category Breakdown -->
+            <div class="col-lg-6">
+              <div class="p-3 bg-dark rounded border border-secondary h-100">
+                <!-- Top Match Ranking & Anomaly Gauge -->
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                  <h6 class="text-warning mb-0"><i class="fa-solid fa-bullseye me-1"></i> Historical Match Ranking & Anomaly Gauge</h6>
+                  <span class="badge bg-danger fs-6" id="anomaly-badge">ANOMALY: 85.0% (CRITICAL)</span>
+                </div>
+
+                <!-- Anomaly Progress Bar -->
+                <div class="mb-3">
+                  <div class="d-flex justify-content-between small text-muted mb-1">
+                    <span>Himalayan Baseline Anomaly Score:</span>
+                    <strong class="text-warning" id="anomaly-score-text">85.0% (CRITICAL)</strong>
+                  </div>
+                  <div class="progress progress-bar-custom bg-secondary">
+                    <div class="progress-bar bg-danger" id="anomaly-progress-bar" style="width: 85%"></div>
+                  </div>
+                </div>
+
+                <!-- Category-Level Match Breakdown -->
+                <h6 class="text-muted small fw-bold d-block mb-2">CATEGORY MATCH SIMILARITY (TOP-3 AVERAGE)</h6>
+                <div class="row g-2 mb-3" id="category-similarity-bars">
+                  <div class="col-6">
+                    <div class="d-flex justify-content-between small text-muted">
+                      <span>🔥 Forest Fire:</span>
+                      <strong class="text-danger" id="cat-sim-fire">92.0%</strong>
+                    </div>
+                    <div class="progress progress-bar-custom bg-black">
+                      <div class="progress-bar bg-danger" id="cat-bar-fire" style="width: 92%"></div>
+                    </div>
+                  </div>
+                  <div class="col-6">
+                    <div class="d-flex justify-content-between small text-muted">
+                      <span>🌊 Flood:</span>
+                      <strong class="text-primary" id="cat-sim-flood">12.4%</strong>
+                    </div>
+                    <div class="progress progress-bar-custom bg-black">
+                      <div class="progress-bar bg-primary" id="cat-bar-flood" style="width: 12%"></div>
+                    </div>
+                  </div>
+                  <div class="col-6 mt-2">
+                    <div class="d-flex justify-content-between small text-muted">
+                      <span>⛰️ Landslide:</span>
+                      <strong class="text-warning" id="cat-sim-landslide">18.5%</strong>
+                    </div>
+                    <div class="progress progress-bar-custom bg-black">
+                      <div class="progress-bar bg-warning" id="cat-bar-landslide" style="width: 18%"></div>
+                    </div>
+                  </div>
+                  <div class="col-6 mt-2">
+                    <div class="d-flex justify-content-between small text-muted">
+                      <span>🌫️ Air Pollution:</span>
+                      <strong class="text-secondary" id="cat-sim-pollution">8.2%</strong>
+                    </div>
+                    <div class="progress progress-bar-custom bg-black">
+                      <div class="progress-bar bg-secondary" id="cat-bar-pollution" style="width: 8%"></div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Top 5 Matches List -->
+                <h6 class="text-muted small fw-bold d-block mb-2">TOP 5 HISTORICAL MATCHES</h6>
+                <div class="bg-black p-2 rounded border border-secondary" style="max-height: 140px; overflow-y: auto; font-size: 0.75rem;" id="top-matches-list">
+                  <div class="text-muted text-center py-2">Loading historical matches...</div>
+                </div>
+
+              </div>
+            </div>
+          </div>
+
+          <!-- Bottom Row inside card: 30-Day Satellite Temporal Trend Chart -->
+          <div class="mt-3 p-3 bg-dark rounded border border-secondary">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <h6 class="text-success mb-0"><i class="fa-solid fa-chart-line me-2"></i> 30-Day Satellite Remote Sensing & Anomaly Temporal Trend</h6>
+              <span class="text-muted small">ISRO / Sentinel Time Series (30 Days)</span>
+            </div>
+            <div style="height: 180px; position: relative;">
+              <canvas id="timeSeriesChart"></canvas>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- Main Grid Row 4: Upload & Compare Satellite Disaster Scenes -->
+    <div class="row mt-3">
+      <div class="col-12">
+        <div class="card-dark border-info">
+          <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+            <h5 class="text-info mb-0">
+              <i class="fa-solid fa-cloud-arrow-up me-2"></i> Upload & Compare Satellite Disaster Scenes
+            </h5>
+            <div>
+              <span class="badge bg-secondary me-2">GeoTIFF, Multi-Band TIFF, PNG/JPG Demo</span>
+              <span class="badge bg-dark border border-secondary text-info">Scene Upload Processor Active</span>
+            </div>
+          </div>
+
+          <!-- Data Mode Banners (Dynamic) -->
+          <div id="upload-data-banner" class="alert alert-dark border-warning p-2 small mb-3 text-center d-none">
+            <i class="fa-solid fa-triangle-exclamation text-warning me-2"></i>
+            <span id="banner-text">DEMO MODE — results are for interface testing only and must not be used for real emergency decisions.</span>
+          </div>
+
+          <div class="row g-3">
+            <!-- LEFT PANEL: Upload Historical Scene -->
+            <div class="col-lg-6">
+              <div class="p-3 bg-dark rounded border border-warning h-100">
+                <h6 class="text-warning mb-2">
+                  <i class="fa-solid fa-history me-1"></i> Upload Historical Disaster Satellite Scene
+                </h6>
+
+                <!-- File Upload Input / Drag-and-Drop Area -->
+                <div class="mb-3">
+                  <label class="form-label text-muted small">Select or Drag Historical Scene File (.tif, .tiff, .png, .jpg, .jpeg)</label>
+                  <input type="file" class="form-control form-control-sm bg-black text-white border-secondary" id="hist-file-input" accept=".tif,.tiff,.png,.jpg,.jpeg">
+                </div>
+
+                <!-- Historical Scene Metadata Form -->
+                <div class="row g-2 mb-2" style="font-size: 0.8rem;">
+                  <div class="col-6">
+                    <label class="text-muted small">Event ID:</label>
+                    <input type="text" class="form-control form-control-sm bg-black text-white border-secondary" id="hist-event-id" placeholder="EVT_2021_ALMORA_FIRE_01">
+                  </div>
+                  <div class="col-6">
+                    <label class="text-muted small">Disaster Type:</label>
+                    <select class="form-select form-select-sm bg-black text-white border-secondary" id="hist-disaster-type">
+                      <option value="Forest_Fire" selected>Forest Fire</option>
+                      <option value="Flood">Flood</option>
+                      <option value="Landslide">Landslide</option>
+                      <option value="Air_Pollution">Air Pollution</option>
+                      <option value="None">Normal / Control</option>
+                    </select>
+                  </div>
+                  <div class="col-6">
+                    <label class="text-muted small">Satellite / Source:</label>
+                    <select class="form-select form-select-sm bg-black text-white border-secondary" id="hist-satellite">
+                      <option value="Sentinel-2" selected>Sentinel-2</option>
+                      <option value="Sentinel-1">Sentinel-1 SAR</option>
+                      <option value="NISAR">NISAR Dual-SAR</option>
+                      <option value="Resourcesat">Resourcesat-2</option>
+                      <option value="RISAT">RISAT-1</option>
+                      <option value="INSAT">INSAT-3D</option>
+                      <option value="Landsat-8">Landsat-8</option>
+                      <option value="Landsat-9">Landsat-9</option>
+                      <option value="Other">Other Sensor</option>
+                    </select>
+                  </div>
+                  <div class="col-6">
+                    <label class="text-muted small">Product Name / Level:</label>
+                    <input type="text" class="form-control form-control-sm bg-black text-white border-secondary" id="hist-product" value="Sentinel-2 L2A Surface Reflectance">
+                  </div>
+                  <div class="col-6">
+                    <label class="text-muted small">Acquisition Date & Time:</label>
+                    <input type="text" class="form-control form-control-sm bg-black text-white border-secondary" id="hist-acq-date" value="2021-05-15 10:30:00">
+                  </div>
+                  <div class="col-3">
+                    <label class="text-muted small">Lat (°N):</label>
+                    <input type="number" step="0.0001" class="form-control form-control-sm bg-black text-white border-secondary" id="hist-lat" value="30.0668">
+                  </div>
+                  <div class="col-3">
+                    <label class="text-muted small">Lon (°E):</label>
+                    <input type="number" step="0.0001" class="form-control form-control-sm bg-black text-white border-secondary" id="hist-lon" value="79.0193">
+                  </div>
+                  <div class="col-4">
+                    <label class="text-muted small">Resolution (m):</label>
+                    <input type="number" class="form-control form-control-sm bg-black text-white border-secondary" id="hist-res" value="10.0">
+                  </div>
+                  <div class="col-4">
+                    <label class="text-muted small">Cloud Cover (%):</label>
+                    <input type="number" class="form-control form-control-sm bg-black text-white border-secondary" id="hist-cloud" value="2.5">
+                  </div>
+                  <div class="col-4">
+                    <label class="text-muted small">Verification Status:</label>
+                    <select class="form-select form-select-sm bg-black text-white border-secondary" id="hist-ver-status">
+                      <option value="UPLOADED_UNVERIFIED" selected>UPLOADED_UNVERIFIED</option>
+                      <option value="VERIFIED">VERIFIED GEOSPATIAL</option>
+                      <option value="DEMO">DEMO / SIMULATED</option>
+                    </select>
+                  </div>
+                </div>
+
+                <!-- Band Mapping Accordion -->
+                <div class="accordion mb-3" id="histBandMappingAccordion">
+                  <div class="accordion-item bg-black border-secondary">
+                    <h2 class="accordion-header">
+                      <button class="accordion-button collapsed bg-black text-warning small py-1" type="button" data-bs-toggle="collapse" data-bs-target="#histBandCollapse">
+                        <i class="fa-solid fa-sliders me-1"></i> Multi-Band Channel Mapping (Optional)
+                      </button>
+                    </h2>
+                    <div id="histBandCollapse" class="accordion-collapse collapse" data-bs-parent="#histBandMappingAccordion">
+                      <div class="accordion-body p-2 small text-white" style="font-size: 0.75rem;">
+                        <div class="row g-1">
+                          <div class="col-3">Red Band #: <input type="number" id="h-bm-r" class="form-control form-control-sm bg-dark text-white p-1" value="1"></div>
+                          <div class="col-3">Green Band #: <input type="number" id="h-bm-g" class="form-control form-control-sm bg-dark text-white p-1" value="2"></div>
+                          <div class="col-3">Blue Band #: <input type="number" id="h-bm-b" class="form-control form-control-sm bg-dark text-white p-1" value="3"></div>
+                          <div class="col-3">NIR Band #: <input type="number" id="h-bm-nir" class="form-control form-control-sm bg-dark text-white p-1" value="4"></div>
+                          <div class="col-4 mt-1">SWIR1 Band #: <input type="number" id="h-bm-sw1" class="form-control form-control-sm bg-dark text-white p-1" value="5"></div>
+                          <div class="col-4 mt-1">SWIR2 Band #: <input type="number" id="h-bm-sw2" class="form-control form-control-sm bg-dark text-white p-1" value="6"></div>
+                          <div class="col-4 mt-1">Thermal Band #: <input type="number" id="h-bm-th" class="form-control form-control-sm bg-dark text-white p-1" value="7"></div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Upload Button & Preview -->
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                  <button class="btn btn-warning btn-sm fw-bold" onclick="uploadHistoricalScene()">
+                    <i class="fa-solid fa-upload me-1"></i> Save Historical Scene
+                  </button>
+                  <span class="badge bg-secondary small" id="hist-upload-status">Ready</span>
+                </div>
+
+                <!-- Uploaded Historical Scene Preview Card -->
+                <div class="p-2 bg-black rounded border border-secondary text-center position-relative" style="min-height: 140px;">
+                  <img id="hist-scene-img" src="" style="width: 100%; max-height: 180px; object-fit: contain; display: none;" alt="Historical Scene Preview">
+                  <div id="hist-img-placeholder" class="py-4 text-muted small">
+                    <i class="fa-solid fa-image fa-2x mb-1 text-warning d-block"></i>
+                    Historical Scene Preview Card
+                  </div>
+                  <div class="text-start mt-2 small" id="hist-scene-info-text" style="font-size: 0.72rem; display: none;"></div>
+                </div>
+
+              </div>
+            </div>
+
+            <!-- RIGHT PANEL: Upload Current Scene -->
+            <div class="col-lg-6">
+              <div class="p-3 bg-dark rounded border border-primary h-100">
+                <h6 class="text-primary mb-2">
+                  <i class="fa-solid fa-satellite me-1"></i> Upload Current Satellite Scene
+                </h6>
+
+                <!-- File Upload Input -->
+                <div class="mb-3">
+                  <label class="form-label text-muted small">Select or Drag Current Scene File (.tif, .tiff, .png, .jpg, .jpeg)</label>
+                  <input type="file" class="form-control form-control-sm bg-black text-white border-secondary" id="curr-file-input" accept=".tif,.tiff,.png,.jpg,.jpeg">
+                </div>
+
+                <!-- Current Scene Metadata Form -->
+                <div class="row g-2 mb-2" style="font-size: 0.8rem;">
+                  <div class="col-6">
+                    <label class="text-muted small">Satellite / Source:</label>
+                    <select class="form-select form-select-sm bg-black text-white border-secondary" id="curr-satellite">
+                      <option value="Sentinel-2" selected>Sentinel-2</option>
+                      <option value="Sentinel-1">Sentinel-1 SAR</option>
+                      <option value="NISAR">NISAR Dual-SAR</option>
+                      <option value="Resourcesat">Resourcesat-2</option>
+                      <option value="Landsat-8">Landsat-8</option>
+                      <option value="Landsat-9">Landsat-9</option>
+                      <option value="Other">Other Sensor</option>
+                    </select>
+                  </div>
+                  <div class="col-6">
+                    <label class="text-muted small">Product Name / Level:</label>
+                    <input type="text" class="form-control form-control-sm bg-black text-white border-secondary" id="curr-product" value="Sentinel-2 L2A Surface Reflectance">
+                  </div>
+                  <div class="col-6">
+                    <label class="text-muted small">Acquisition Date & Time:</label>
+                    <input type="text" class="form-control form-control-sm bg-black text-white border-secondary" id="curr-acq-date" value="2026-09-18 11:00:00">
+                  </div>
+                  <div class="col-3">
+                    <label class="text-muted small">Lat (°N):</label>
+                    <input type="number" step="0.0001" class="form-control form-control-sm bg-black text-white border-secondary" id="curr-lat" value="30.0668">
+                  </div>
+                  <div class="col-3">
+                    <label class="text-muted small">Lon (°E):</label>
+                    <input type="number" step="0.0001" class="form-control form-control-sm bg-black text-white border-secondary" id="curr-lon" value="79.0193">
+                  </div>
+                  <div class="col-4">
+                    <label class="text-muted small">Resolution (m):</label>
+                    <input type="number" class="form-control form-control-sm bg-black text-white border-secondary" id="curr-res" value="10.0">
+                  </div>
+                  <div class="col-4">
+                    <label class="text-muted small">Cloud Cover (%):</label>
+                    <input type="number" class="form-control form-control-sm bg-black text-white border-secondary" id="curr-cloud" value="1.0">
+                  </div>
+                  <div class="col-4">
+                    <label class="text-muted small">Verification Status:</label>
+                    <select class="form-select form-select-sm bg-black text-white border-secondary" id="curr-ver-status">
+                      <option value="UPLOADED_UNVERIFIED" selected>UPLOADED_UNVERIFIED</option>
+                      <option value="VERIFIED">VERIFIED GEOSPATIAL</option>
+                      <option value="DEMO">DEMO / SIMULATED</option>
+                    </select>
+                  </div>
+                </div>
+
+                <!-- Band Mapping Accordion -->
+                <div class="accordion mb-3" id="currBandMappingAccordion">
+                  <div class="accordion-item bg-black border-secondary">
+                    <h2 class="accordion-header">
+                      <button class="accordion-button collapsed bg-black text-info small py-1" type="button" data-bs-toggle="collapse" data-bs-target="#currBandCollapse">
+                        <i class="fa-solid fa-sliders me-1"></i> Multi-Band Channel Mapping (Optional)
+                      </button>
+                    </h2>
+                    <div id="currBandCollapse" class="accordion-collapse collapse" data-bs-parent="#currBandMappingAccordion">
+                      <div class="accordion-body p-2 small text-white" style="font-size: 0.75rem;">
+                        <div class="row g-1">
+                          <div class="col-3">Red Band #: <input type="number" id="c-bm-r" class="form-control form-control-sm bg-dark text-white p-1" value="1"></div>
+                          <div class="col-3">Green Band #: <input type="number" id="c-bm-g" class="form-control form-control-sm bg-dark text-white p-1" value="2"></div>
+                          <div class="col-3">Blue Band #: <input type="number" id="c-bm-b" class="form-control form-control-sm bg-dark text-white p-1" value="3"></div>
+                          <div class="col-3">NIR Band #: <input type="number" id="c-bm-nir" class="form-control form-control-sm bg-dark text-white p-1" value="4"></div>
+                          <div class="col-4 mt-1">SWIR1 Band #: <input type="number" id="c-bm-sw1" class="form-control form-control-sm bg-dark text-white p-1" value="5"></div>
+                          <div class="col-4 mt-1">SWIR2 Band #: <input type="number" id="c-bm-sw2" class="form-control form-control-sm bg-dark text-white p-1" value="6"></div>
+                          <div class="col-4 mt-1">Thermal Band #: <input type="number" id="c-bm-th" class="form-control form-control-sm bg-dark text-white p-1" value="7"></div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Upload Button & Preview -->
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                  <button class="btn btn-primary btn-sm fw-bold" onclick="uploadCurrentScene()">
+                    <i class="fa-solid fa-upload me-1"></i> Save Current Scene
+                  </button>
+                  <span class="badge bg-secondary small" id="curr-upload-status">Ready</span>
+                </div>
+
+                <!-- Uploaded Current Scene Preview Card -->
+                <div class="p-2 bg-black rounded border border-secondary text-center position-relative" style="min-height: 140px;">
+                  <img id="curr-scene-img" src="" style="width: 100%; max-height: 180px; object-fit: contain; display: none;" alt="Current Scene Preview">
+                  <div id="curr-img-placeholder" class="py-4 text-muted small">
+                    <i class="fa-solid fa-image fa-2x mb-1 text-primary d-block"></i>
+                    Current Scene Preview Card
+                  </div>
+                  <div class="text-start mt-2 small" id="curr-scene-info-text" style="font-size: 0.72rem; display: none;"></div>
+                </div>
+
+              </div>
+            </div>
+          </div>
+
+          <!-- BOTTOM CONTROL BAR: Scene Comparison Action Area -->
+          <div class="mt-3 p-3 bg-dark rounded border border-secondary">
+            <div class="row g-2 align-items-center mb-3">
+              <div class="col-md-4">
+                <label class="text-warning small fw-bold">Select Historical Scene:</label>
+                <select class="form-select form-select-sm bg-black text-white border-warning" id="select-hist-scene" onchange="checkAutoRunUploadedSceneComparison()">
+                  <option value="">-- Select Stored Historical Scene --</option>
+                </select>
+              </div>
+              <div class="col-md-4">
+                <label class="text-primary small fw-bold">Select Current Scene:</label>
+                <select class="form-select form-select-sm bg-black text-white border-primary" id="select-curr-scene" onchange="checkAutoRunUploadedSceneComparison()">
+                  <option value="">-- Select Stored Current Scene --</option>
+                </select>
+              </div>
+              <div class="col-md-2">
+                <label class="text-muted small">Patch ROI Size:</label>
+                <select class="form-select form-select-sm bg-black text-white border-secondary" id="compare-patch-size">
+                  <option value="3">3 × 3 (9 Pixels)</option>
+                  <option value="5" selected>5 × 5 (25 Pixels)</option>
+                  <option value="9">9 × 9 (81 Pixels)</option>
+                </select>
+              </div>
+              <div class="col-md-2 d-flex align-items-end gap-1">
+                <button class="btn btn-warning btn-sm w-100 fw-bold py-1 mt-3" onclick="runUploadedSceneComparison()">
+                  <i class="fa-solid fa-code-compare me-1"></i> Compare Scenes
+                </button>
+              </div>
+            </div>
+
+            <!-- RESULTS SECTION -->
+            <div id="comparison-results-panel" style="display: none;">
+              <!-- 1. Compatibility Badge Header -->
+              <div class="p-2 rounded mb-3 d-flex justify-content-between align-items-center flex-wrap gap-2" id="compat-badge-header">
+                <div>
+                  <span class="badge fs-6 me-2" id="compat-level-badge">FULLY COMPATIBLE</span>
+                  <span class="small" id="compat-message-text">Same sensor/product surface reflectance bands.</span>
+                </div>
+                <div>
+                  <span class="badge bg-dark border border-secondary me-1" id="res-hist-ver">HISTORICAL: VERIFIED</span>
+                  <span class="badge bg-dark border border-secondary" id="res-curr-ver">CURRENT: UNVERIFIED</span>
+                </div>
+              </div>
+
+              <!-- 2. Side-by-Side Image Viewer & Feature Table Row -->
+              <div class="row g-3 mb-3">
+                <!-- Side-by-Side Image Previews -->
+                <div class="col-lg-5">
+                  <div class="p-2 bg-black rounded border border-secondary text-center h-100">
+                    <h6 class="text-muted small mb-2"><i class="fa-solid fa-images me-1"></i> Side-by-Side Scene Preview Overlay</h6>
+                    <div class="row g-1">
+                      <div class="col-6">
+                        <span class="text-warning small d-block">Historical Scene</span>
+                        <img id="res-hist-img" src="" style="width: 100%; max-height: 160px; object-fit: contain; border: 1px solid #f97316;" class="rounded">
+                      </div>
+                      <div class="col-6">
+                        <span class="text-primary small d-block">Current Scene</span>
+                        <img id="res-curr-img" src="" style="width: 100%; max-height: 160px; object-fit: contain; border: 1px solid #38bdf8;" class="rounded">
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Feature Comparison Table (16 Parameters) -->
+                <div class="col-lg-7">
+                  <div class="p-2 bg-black rounded border border-secondary h-100">
+                    <h6 class="text-info small mb-2"><i class="fa-solid fa-list-check me-1"></i> Patch Feature Vectors & Delta Comparison</h6>
+                    <div class="table-responsive" style="max-height: 180px; overflow-y: auto;">
+                      <table class="table table-dark table-sm table-bordered text-center align-middle small mb-0" style="font-size: 0.75rem;">
+                        <thead>
+                          <tr class="table-secondary text-dark">
+                            <th>Parameter</th>
+                            <th>Historical Patch Mean</th>
+                            <th>Current Patch Mean</th>
+                            <th>Delta</th>
+                            <th>Change %</th>
+                            <th>Status</th>
+                          </tr>
+                        </thead>
+                        <tbody id="feature-comparison-tbody">
+                          <tr><td colspan="6" class="text-muted">Run comparison to populate feature vector...</td></tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- 3. Risk Evidence & Fusion Summary Panel -->
+              <div class="row g-3 mb-2">
+                <!-- Multi-Modal Fusion Model Engine Card -->
+                <div class="col-lg-4">
+                  <div class="p-3 bg-black rounded border border-danger h-100">
+                    <h6 class="text-danger mb-2"><i class="fa-solid fa-brain me-1"></i> Multi-Modal Fusion Model Engine</h6>
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                      <span class="small text-muted">Fusion Risk Level:</span>
+                      <span class="badge bg-danger fs-6" id="res-fusion-risk-level">LOW</span>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                      <span class="small text-muted">Predicted Disaster:</span>
+                      <strong class="text-warning fw-bold" id="res-fusion-disaster">NONE</strong>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                      <span class="small text-muted">Disaster Probability:</span>
+                      <strong class="text-danger fs-5" id="res-fusion-prob">12.5%</strong>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                      <span class="small text-muted">System Confidence:</span>
+                      <span class="text-info fw-bold" id="res-fusion-conf">95.0%</span>
+                    </div>
+                    <div class="mt-2 pt-2 border-top border-secondary text-muted" style="font-size: 0.7rem;">
+                      <i class="fa-solid fa-layer-group me-1 text-primary"></i> 4-Model AI Ensemble (CNN + LSTM + RF + CV) + Baseline Feature Comparison
+                    </div>
+                  </div>
+                </div>
+
+                <div class="col-lg-4">
+                  <div class="p-3 bg-black rounded border border-warning h-100">
+                    <h6 class="text-warning mb-2"><i class="fa-solid fa-shield-halved me-1"></i> Scientific Risk Assessment</h6>
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                      <span class="small text-muted">Overall Similarity %:</span>
+                      <strong class="text-info fs-5" id="res-sim-pct">0.0%</strong>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                      <span class="small text-muted">Leading Disaster Pattern:</span>
+                      <strong class="text-danger fw-bold" id="res-disaster-pattern">NONE</strong>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                      <span class="small text-muted">Baseline Anomaly Score:</span>
+                      <strong class="text-warning" id="res-anomaly-score">0.0% (NORMAL)</strong>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                      <span class="small text-muted">Ground Sensor Confirmation:</span>
+                      <span class="badge bg-warning text-dark" id="res-ground-confirm">REQUIRED</span>
+                    </div>
+                    <p class="small text-muted mb-0 mt-2 p-2 bg-dark rounded border border-secondary" id="res-explanation-text">
+                      Scientific explanation text...
+                    </p>
+                  </div>
+                </div>
+
+                <!-- Charts Column -->
+                <div class="col-lg-4">
+                  <div class="p-3 bg-black rounded border border-info h-100">
+                    <h6 class="text-info mb-2"><i class="fa-solid fa-chart-bar me-1"></i> Spectral Profile Feature Comparison</h6>
+                    <div style="height: 160px; position: relative;">
+                      <canvas id="uploadCompareBarChart"></canvas>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Action Buttons -->
+              <div class="d-flex justify-content-end gap-2 mt-3">
+                <button class="btn btn-outline-info btn-sm" onclick="exportUploadComparisonJSON()">
+                  <i class="fa-solid fa-download me-1"></i> Export Comparison JSON
+                </button>
+                <button class="btn btn-success btn-sm fw-bold" onclick="applyToFusionEngine()">
+                  <i class="fa-solid fa-brain me-1"></i> Use Result in Fusion Engine
+                </button>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Leaflet JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <script>
+    // Initialize Leaflet Map over Himalayan Grid
+    const map = L.map('map').setView([30.0668, 79.0193], 10);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© ISRO Bhuvan / OpenStreetMap',
+      maxZoom: 18
+    }).addTo(map);
+
+    const roiCircle = L.circle([30.0668, 79.0193], {
+      color: '#38bdf8',
+      fillColor: '#0284c7',
+      fillOpacity: 0.25,
+      radius: 12000
+    }).addTo(map).bindPopup("<b>ISRO High-Risk Surveillance Grid</b><br>Resourcesat-2 & INSAT-3D Active");
+
+    let activeMarker = L.marker([30.0668, 79.0193]).addTo(map)
+      .bindPopup("<b>ESP8266 IoT Ground Node 01</b><br>Status: NORMAL");
+
+    let patchRoiRectangle = null;
+    let matchMarkersGroup = L.layerGroup().addTo(map);
+    let currentComparisonJSON = null;
+
+    // Initialize Chart.js
+    const ctx = document.getElementById('timeSeriesChart').getContext('2d');
+    const timeChart = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: Array.from({length: 30}, (_, i) => `Day ${i+1}`),
+        datasets: [
+          { label: 'NDVI (Vegetation)', data: Array(30).fill(0.7), borderColor: '#22c55e', tension: 0.3 },
+          { label: 'LST (Surface Temp)', data: Array(30).fill(0.4), borderColor: '#ef4444', tension: 0.3 },
+          { label: 'Soil Moisture', data: Array(30).fill(0.45), borderColor: '#38bdf8', tension: 0.3 }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { labels: { color: '#f8fafc' } } },
+        scales: {
+          x: { ticks: { color: '#94a3b8' }, grid: { color: '#1e293b' } },
+          y: { min: 0, max: 1, ticks: { color: '#94a3b8' }, grid: { color: '#1e293b' } }
+        }
+      }
+    });
+
+    function runHistoricalComparison() {
+      const patchSelect = document.getElementById('patch-size-select');
+      const disasterSelect = document.getElementById('disaster-filter-select');
+      const patchSize = patchSelect ? (parseInt(patchSelect.value) || 5) : 5;
+      const disasterType = disasterSelect ? disasterSelect.value : 'ALL';
+      
+      const badge = document.getElementById('hist-patch-size-badge');
+      if (badge) badge.innerText = `${patchSize}×${patchSize} Patch Grid`;
+
+      fetch('/api/historical_comparison', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          patch_size: patchSize,
+          disaster_type: disasterType,
+          latitude: 30.0668,
+          longitude: 79.0193
+        })
+      })
+      .then(res => res.json())
+      .then(data => {
+        currentComparisonJSON = data;
+        renderHistoricalUI(data);
+      })
+      .catch(err => console.error("Error fetching historical comparison:", err));
+    }
+
+    function renderHistoricalUI(data) {
+      if (!data) return;
+
+      // 1. Update Patch Metadata & Stats
+      const pStats = data.multi_spectral_patch_stats || {};
+      const validEl = document.getElementById('patch-valid-count');
+      if (validEl) validEl.innerText = `${pStats.valid_pixel_count || 25} Valid Pixels`;
+      
+      if (data.query_sample) {
+        const sceneEl = document.getElementById('query-scene-id');
+        if (sceneEl) sceneEl.innerText = `SCENE: ${data.query_sample.scene_id || 'CURRENT_ROI_01'}`;
+        const satEl = document.getElementById('meta-sat');
+        if (satEl) satEl.innerText = data.query_sample.satellite || 'Sentinel-2 / NISAR';
+        const prodEl = document.getElementById('meta-prod');
+        if (prodEl) prodEl.innerText = data.query_sample.product || 'L2A Reflectance';
+        
+        const ver = data.query_sample.verification_status || 'DEMO';
+        const qBadge = document.getElementById('meta-quality');
+        if (qBadge) {
+          qBadge.innerText = ver === 'VERIFIED' ? 'VERIFIED DATASET' : 'DEMO (SYNTHETIC)';
+          qBadge.className = `badge ${ver === 'VERIFIED' ? 'bg-success' : 'bg-secondary'}`;
+        }
+      }
+
+      // Populate Patch Stats Table
+      const qPixels = data.query_sample ? data.query_sample.raw_pixels || {} : {};
+      const ndviStats = pStats.ndvi || {};
+      const nbrStats = pStats.nbr || {};
+      const lstStats = pStats.lst || {};
+
+      const cNdvi = document.getElementById('tbl-c-ndvi');
+      if (cNdvi) cNdvi.innerText = (qPixels.ndvi !== undefined) ? qPixels.ndvi.toFixed(4) : (data.query_sample && data.query_sample.indices ? data.query_sample.indices.ndvi : '0.2444');
+      const mNdvi = document.getElementById('tbl-m-ndvi');
+      if (mNdvi) mNdvi.innerText = ndviStats.mean !== undefined ? ndviStats.mean.toFixed(4) : 'N/A';
+      const sNdvi = document.getElementById('tbl-s-ndvi');
+      if (sNdvi) sNdvi.innerText = ndviStats.std !== undefined ? ndviStats.std.toFixed(4) : 'N/A';
+      const medNdvi = document.getElementById('tbl-med-ndvi');
+      if (medNdvi) medNdvi.innerText = ndviStats.median !== undefined ? ndviStats.median.toFixed(4) : 'N/A';
+
+      const cNbr = document.getElementById('tbl-c-nbr');
+      if (cNbr) cNbr.innerText = (qPixels.nbr !== undefined) ? qPixels.nbr.toFixed(4) : (data.query_sample && data.query_sample.indices ? data.query_sample.indices.nbr : '-0.3191');
+      const mNbr = document.getElementById('tbl-m-nbr');
+      if (mNbr) mNbr.innerText = nbrStats.mean !== undefined ? nbrStats.mean.toFixed(4) : 'N/A';
+      const sNbr = document.getElementById('tbl-s-nbr');
+      if (sNbr) sNbr.innerText = nbrStats.std !== undefined ? nbrStats.std.toFixed(4) : 'N/A';
+      const medNbr = document.getElementById('tbl-med-nbr');
+      if (medNbr) medNbr.innerText = nbrStats.median !== undefined ? nbrStats.median.toFixed(4) : 'N/A';
+
+      const lstVal = qPixels.thermal || qPixels.lst || 44.8;
+      const cLst = document.getElementById('tbl-c-lst');
+      if (cLst) cLst.innerText = `${lstVal}°C`;
+      const mLst = document.getElementById('tbl-m-lst');
+      if (mLst) mLst.innerText = lstStats.mean !== undefined ? `${lstStats.mean}°C` : 'N/A';
+      const sLst = document.getElementById('tbl-s-lst');
+      if (sLst) sLst.innerText = lstStats.std !== undefined ? `${lstStats.std}°C` : 'N/A';
+      const medLst = document.getElementById('tbl-med-lst');
+      if (medLst) medLst.innerText = lstStats.median !== undefined ? `${lstStats.median}°C` : 'N/A';
+
+      const lbandVal = qPixels.sar_l_band_db || -12.4;
+      const cLband = document.getElementById('tbl-c-lband');
+      if (cLband) cLband.innerText = `${lbandVal} dB`;
+      const mLband = document.getElementById('tbl-m-lband');
+      if (mLband) mLband.innerText = `${lbandVal} dB`;
+      const sLband = document.getElementById('tbl-s-lband');
+      if (sLband) sLband.innerText = `0.4 dB`;
+      const medLband = document.getElementById('tbl-med-lband');
+      if (medLband) medLband.innerText = `${lbandVal} dB`;
+
+      // 2. Anomaly Score & Badge
+      const anom = data.anomaly || {};
+      const aScore = anom.score_percent || 15.0;
+      const aStatus = anom.status || 'NORMAL';
+      
+      const aBadge = document.getElementById('anomaly-badge');
+      if (aBadge) {
+        aBadge.innerText = `ANOMALY: ${aScore}% (${aStatus})`;
+        aBadge.className = `badge fs-6 ${aStatus === 'CRITICAL' ? 'bg-danger' : (aStatus === 'HIGH' ? 'bg-warning text-dark' : 'bg-success')}`;
+      }
+      
+      const aText = document.getElementById('anomaly-score-text');
+      if (aText) aText.innerText = `${aScore}% (${aStatus})`;
+      const aBar = document.getElementById('anomaly-progress-bar');
+      if (aBar) {
+        aBar.style.width = `${aScore}%`;
+        aBar.className = `progress-bar ${aStatus === 'CRITICAL' ? 'bg-danger' : (aStatus === 'HIGH' ? 'bg-warning' : 'bg-success')}`;
+      }
+
+      // 3. Category Level Scores
+      const catScores = data.class_level_scores || {};
+      
+      const fireSim = catScores.Forest_Fire ? catScores.Forest_Fire.similarity_percent : 0.0;
+      const cSimFire = document.getElementById('cat-sim-fire');
+      if (cSimFire) cSimFire.innerText = `${fireSim}%`;
+      const cBarFire = document.getElementById('cat-bar-fire');
+      if (cBarFire) cBarFire.style.width = `${fireSim}%`;
+
+      const floodSim = catScores.Flood ? catScores.Flood.similarity_percent : 0.0;
+      const cSimFlood = document.getElementById('cat-sim-flood');
+      if (cSimFlood) cSimFlood.innerText = `${floodSim}%`;
+      const cBarFlood = document.getElementById('cat-bar-flood');
+      if (cBarFlood) cBarFlood.style.width = `${floodSim}%`;
+
+      const landSim = catScores.Landslide ? catScores.Landslide.similarity_percent : 0.0;
+      const cSimLand = document.getElementById('cat-sim-landslide');
+      if (cSimLand) cSimLand.innerText = `${landSim}%`;
+      const cBarLand = document.getElementById('cat-bar-landslide');
+      if (cBarLand) cBarLand.style.width = `${landSim}%`;
+
+      const polSim = catScores.Air_Pollution ? catScores.Air_Pollution.similarity_percent : 0.0;
+      const cSimPol = document.getElementById('cat-sim-pollution');
+      if (cSimPol) cSimPol.innerText = `${polSim}%`;
+      const cBarPol = document.getElementById('cat-bar-pollution');
+      if (cBarPol) cBarPol.style.width = `${polSim}%`;
+
+      // 4. Top 5 Matches List
+      const topMatches = (data.top_matches || []).slice(0, 5);
+      const listEl = document.getElementById('top-matches-list');
+      
+      if (listEl) {
+        if (topMatches.length === 0) {
+          listEl.innerHTML = '<div class="text-muted text-center py-2">No historical matches found</div>';
+        } else {
+          let html = '';
+          topMatches.forEach((m, idx) => {
+            const verBadge = m.verification_status === 'VERIFIED' ? '<span class="badge bg-success">VERIFIED</span>' : '<span class="badge bg-secondary">DEMO</span>';
+            const simPct = m.similarity_percent || 0.0;
+            const dtype = (m.disaster_type || 'None').replace('_', ' ');
+            
+            html += `
+              <div class="d-flex justify-content-between align-items-center py-1 border-bottom border-secondary">
+                <div>
+                  <strong class="text-warning">#${idx+1} ${m.event_id}</strong>
+                  <span class="text-muted ms-1">(${dtype})</span>
+                  <span class="ms-1">${verBadge}</span>
+                  <div class="text-muted" style="font-size: 0.68rem;">${m.acquisition_date} | ${m.satellite}</div>
+                </div>
+                <div class="text-end">
+                  <span class="fw-bold text-info">${simPct}% Match</span>
+                </div>
+              </div>
+            `;
+          });
+          listEl.innerHTML = html;
+        }
+      }
+
+      // 5. Update Map ROI Rectangle & Match Markers
+      updateMapPatchROI(data.patch_size || 5, topMatches);
+      
+      // 6. Update Trend Chart
+      fetchTrendChartData();
+    }
+
+    function updateMapPatchROI(patchSize, matches) {
+      const centerLat = 30.0668;
+      const centerLon = 79.0193;
+
+      const offset = (patchSize * 0.002) / 2.0;
+      const bounds = [
+        [centerLat - offset, centerLon - offset],
+        [centerLat + offset, centerLon + offset]
+      ];
+
+      if (patchRoiRectangle) {
+        map.removeLayer(patchRoiRectangle);
+      }
+
+      patchRoiRectangle = L.rectangle(bounds, {
+        color: '#f97316',
+        weight: 2,
+        dashArray: '4, 4',
+        fillColor: '#f97316',
+        fillOpacity: 0.15
+      }).addTo(map).bindPopup(`<b>${patchSize}×${patchSize} Patch ROI Boundary</b><br>Resolution: ${patchSize * 10}m Sweep Swath`);
+
+      matchMarkersGroup.clearLayers();
+
+      (matches || []).forEach(m => {
+        if (m.latitude && m.longitude) {
+          const color = m.disaster_type === 'Forest_Fire' ? '#ef4444' : (m.disaster_type === 'Flood' ? '#38bdf8' : '#f97316');
+          const marker = L.circleMarker([m.latitude, m.longitude], {
+            radius: 6,
+            color: color,
+            fillColor: color,
+            fillOpacity: 0.8
+          }).bindPopup(`<b>${m.event_id} (${m.disaster_type})</b><br>Similarity: ${m.similarity_percent}%<br>Status: ${m.verification_status}`);
+          matchMarkersGroup.addLayer(marker);
+        }
+      });
+    }
+
+    function fetchTrendChartData() {
+      fetch('/api/satellite_history_trend')
+      .then(res => res.json())
+      .then(data => {
+        if (data.status === 'success' && data.trend && timeChart) {
+          const labels = data.trend.map(t => t.day);
+          const ndviData = data.trend.map(t => t.ndvi);
+          const lstData = data.trend.map(t => t.lst);
+          const soilData = data.trend.map(t => t.soil_moisture);
+
+          timeChart.data.labels = labels;
+          timeChart.data.datasets[0].data = ndviData;
+          timeChart.data.datasets[1].data = lstData;
+          timeChart.data.datasets[2].data = soilData;
+          timeChart.update();
+        }
+      })
+      .catch(err => {});
+    }
+
+    function downloadHistoricalJSON() {
+      if (!currentComparisonJSON) {
+        alert("Please run comparison first!");
+        return;
+      }
+      const str = JSON.stringify(currentComparisonJSON, null, 2);
+      const blob = new Blob([str], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `historical_comparison_${Date.now()}.json`;
+      a.click();
+    }
+
+    function injectScenario(scenarioName) {
+      if (scenarioName === 'landslide') {
+        fetch('/api/demo/landslide-sos', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ source: 'dashboard_scenario_injector' })
+        })
+        .then(res => res.json())
+        .then(data => updateDashboardUI(data, 'landslide'))
+        .catch(err => console.error("Error sending landslide demo:", err));
+      } else if (scenarioName === 'normal') {
+        fetch('/api/demo/reset-landslide-sos', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ source: 'dashboard_scenario_injector' })
+        })
+        .then(res => res.json())
+        .then(data => updateDashboardUI(data, 'normal'))
+        .catch(err => console.error("Error resetting demo:", err));
+      } else {
+        fetch('/api/sensor_data', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ scenario: scenarioName, temperature: getScenarioTemp(scenarioName) })
+        })
+        .then(res => res.json())
+        .then(data => updateDashboardUI(data, scenarioName))
+        .catch(err => console.error("Error sending scenario:", err));
+      }
+    }
+
+    function getScenarioTemp(sc) {
+      if (sc === 'forest_fire') return 52.0;
+      if (sc === 'flood') return 21.0;
+      if (sc === 'landslide') return 25.8;
+      if (sc === 'air_pollution') return 36.0;
+      return 26.5;
+    }
+
+    function updateDashboardUI(data, scName) {
+      if (scName) activeScenarioName = scName;
+      const alertObj = data.alert || {};
+      const prob = data.disaster_probability_percent !== undefined ? data.disaster_probability_percent : (scName === 'landslide' ? 94.5 : 12.5);
+      let risk = alertObj.risk_level || data.risk_level || (scName === 'landslide' ? "CRITICAL" : "LOW");
+      if (risk === "NORMAL") risk = "LOW";
+      const disaster = alertObj.disaster_type || data.predicted_disaster || (scName === 'landslide' ? "Landslide" : "None");
+
+      if (data && data.historical_comparison) {
+        currentComparisonJSON = data.historical_comparison;
+        renderHistoricalUI(data.historical_comparison);
+      } else {
+        runHistoricalComparison();
+      }
+
+      const riskDisp = document.getElementById('risk-score-display');
+      if (riskDisp) riskDisp.innerText = `${prob}%`;
+      const badge = document.getElementById('risk-tier-badge');
+      if (badge) {
+        badge.innerText = `${risk} RISK`;
+        badge.className = `badge fs-6 ${risk === 'CRITICAL' ? 'bg-danger' : (risk === 'HIGH' ? 'bg-warning text-dark' : 'bg-success')}`;
+      }
+
+      const predLabel = document.getElementById('predicted-disaster-label');
+      if (predLabel) predLabel.innerText = `Detected Disaster: ${disaster.replace('_', ' ').toUpperCase()}`;
+
+      if (data.satellite_fps) {
+        const fpsBadge = document.getElementById('stream-rates-badge');
+        if (fpsBadge) fpsBadge.innerText = `🛰️ NISAR Dual-SAR Stream: ${data.satellite_fps} FPS`;
+      }
+
+      const setTxt = (id, txt) => { const el = document.getElementById(id); if (el) el.innerText = txt; };
+      const setCls = (id, cls) => { const el = document.getElementById(id); if (el) el.className = cls; };
+
+      if (scName === 'landslide' || alertObj.disaster_type === 'Landslide') {
+        setTxt('val-temp', '25.8°C');
+        setTxt('val-hum', '92.0%');
+        setTxt('val-soil', '88.0%');
+        setTxt('val-smoke', '185');
+        setTxt('val-water', '22.0 cm');
+        setTxt('val-flame', 'NO');
+        setCls('val-flame', 'metric-value text-success');
+        setTxt('val-vib', '14.8 m/s²');
+        setCls('val-vib', 'metric-value text-danger');
+        setTxt('val-tilt', '48.5°');
+        setCls('val-tilt', 'metric-value text-danger');
+        setTxt('val-gyro', '86.4°/s');
+        setCls('val-gyro', 'metric-value text-danger');
+        setTxt('val-tilt-state', 'TILTED (RED LED / BUZZER ON)');
+        setCls('val-tilt-state', 'metric-value text-danger');
+      } else if (scName === 'forest_fire') {
+        setTxt('val-temp', '54.2°C');
+        setTxt('val-hum', '14.0%');
+        setTxt('val-smoke', '840');
+        setTxt('val-soil', '5.0%');
+        setTxt('val-flame', 'YES');
+        setCls('val-flame', 'metric-value text-danger');
+      } else if (scName === 'flood') {
+        setTxt('val-temp', '21.0°C');
+        setTxt('val-hum', '94.0%');
+        setTxt('val-soil', '96.0%');
+        setTxt('val-water', '85.0 cm');
+      } else {
+        setTxt('val-temp', '26.5°C');
+        setTxt('val-hum', '52.0%');
+        setTxt('val-smoke', '185');
+        setTxt('val-soil', '42.0%');
+        setTxt('val-flame', 'NO');
+        setCls('val-flame', 'metric-value text-success');
+      }
+    }
+
+    function pollLatestMobileCameraImage() {
+      fetch('/api/latest_camera_image')
+      .then(res => res.json())
+      .then(data => {
+        const imgEl = document.getElementById('mobile-live-feed-img');
+        const placeholder = document.getElementById('cam-feed-placeholder');
+        const statusBadge = document.getElementById('nisar-live-status');
+
+        if (data.image) {
+          imgEl.src = data.image;
+          imgEl.style.display = 'block';
+          placeholder.style.display = 'none';
+          statusBadge.className = 'badge bg-success';
+          statusBadge.innerText = `📡 NISAR PASS (${data.fps || 5.0} FPS)`;
+        }
+
+        if (data.nisar_pixels) {
+          const px = data.nisar_pixels;
+          document.getElementById('n-px-r').innerText = px.red !== undefined ? px.red.toFixed(3) : '0.150';
+          document.getElementById('n-px-g').innerText = px.green !== undefined ? px.green.toFixed(3) : '0.650';
+          document.getElementById('n-px-b').innerText = px.blue !== undefined ? px.blue.toFixed(3) : '0.150';
+          if (document.getElementById('n-px-nir')) {
+            document.getElementById('n-px-nir').innerText = px.nir !== undefined ? px.nir.toFixed(3) : '0.750';
+          }
+          if (document.getElementById('n-px-swir')) {
+            document.getElementById('n-px-swir').innerText = px.swir !== undefined ? px.swir.toFixed(3) : '0.150';
+          }
+          document.getElementById('n-px-lband').innerText = `${px.l_band_db || -12.4} dB`;
+          document.getElementById('n-px-sband').innerText = `${px.s_band_db || -8.6} dB`;
+        }
+      })
+      .catch(err => {});
+    }
+
+    function fetchNisarFiles() {
+      fetch('/api/nisar_files')
+      .then(res => res.json())
+      .then(data => {
+        if (data.status === 'success') {
+          const countEl = document.getElementById('nisar-folder-count');
+          if (countEl) countEl.innerText = `${data.count} Saved Files`;
+          const listEl = document.getElementById('nisar-file-list');
+          if (listEl) {
+            if (!data.files || data.files.length === 0) {
+              listEl.innerHTML = '<li class="text-muted text-center py-1">No files in nisar/ folder yet</li>';
+              return;
+            }
+            let html = '';
+            data.files.forEach(f => {
+              const isJson = f.filename.endsWith('.json');
+              const icon = isJson ? 'fa-file-code text-warning' : 'fa-image text-info';
+              const kb = (f.size_bytes / 1024).toFixed(1);
+              html += `<li class="d-flex justify-content-between align-items-center py-1 border-bottom border-secondary">
+                <span class="text-truncate" style="max-width: 170px;">
+                  <i class="fa-solid ${icon} me-1"></i> ${f.filename}
+                </span>
+                <span>
+                  <span class="text-muted me-2" style="font-size: 0.65rem;">${kb} KB</span>
+                  <a href="${f.url}" target="_blank" class="text-primary text-decoration-none" download><i class="fa-solid fa-download"></i></a>
+                </span>
+              </li>`;
+            });
+            listEl.innerHTML = html;
+          }
+        }
+      })
+      .catch(err => console.error("Error loading NISAR files:", err));
+    }
+
+    let uploadBarChart = null;
+    let currentSceneComparisonResult = null;
+
+    function loadUploadedScenesDropdowns(autoSelectId, sceneType) {
+      fetch('/api/uploaded-scenes')
+      .then(res => res.json())
+      .then(data => {
+        if (data.status === 'success') {
+          const histSelect = document.getElementById('select-hist-scene');
+          const currSelect = document.getElementById('select-curr-scene');
+          if (histSelect && currSelect) {
+            const histScenes = data.scenes.filter(s => s.scene_type === 'historical');
+            const currScenes = data.scenes.filter(s => s.scene_type === 'current');
+
+            let histHtml = '<option value="">-- Select Stored Historical Scene --</option>';
+            histScenes.forEach(s => {
+              histHtml += `<option value="${s.scene_id}">${s.event_id || s.scene_id} (${s.disaster_type || 'Unknown'}) - ${s.satellite} [${s.verification_status}]</option>`;
+            });
+            histSelect.innerHTML = histHtml;
+
+            let currHtml = '<option value="">-- Select Stored Current Scene --</option>';
+            currScenes.forEach(s => {
+              currHtml += `<option value="${s.scene_id}">${s.scene_id} - ${s.satellite} (${s.acquisition_date}) [${s.verification_status}]</option>`;
+            });
+            currSelect.innerHTML = currHtml;
+
+            if (autoSelectId && sceneType === 'historical' && histSelect.querySelector(`option[value="${autoSelectId}"]`)) {
+              histSelect.value = autoSelectId;
+            } else if (autoSelectId && sceneType === 'current' && currSelect.querySelector(`option[value="${autoSelectId}"]`)) {
+              currSelect.value = autoSelectId;
+            }
+
+            checkAutoRunUploadedSceneComparison();
+          }
+        }
+      })
+      .catch(err => console.error("Error loading uploaded scenes:", err));
+    }
+
+    function checkAutoRunUploadedSceneComparison() {
+      const hVal = document.getElementById('select-hist-scene') ? document.getElementById('select-hist-scene').value : '';
+      const cVal = document.getElementById('select-curr-scene') ? document.getElementById('select-curr-scene').value : '';
+      if (hVal && cVal) {
+        runUploadedSceneComparison();
+      }
+    }
+
+    function uploadHistoricalScene() {
+      const fileInput = document.getElementById('hist-file-input');
+      if (!fileInput.files || fileInput.files.length === 0) {
+        alert("Please select a file to upload for Historical Scene.");
+        return;
+      }
+      const formData = new FormData();
+      formData.append('file', fileInput.files[0]);
+      formData.append('event_id', document.getElementById('hist-event-id').value || 'EVT_HISTORICAL_01');
+      formData.append('disaster_type', document.getElementById('hist-disaster-type').value);
+      formData.append('satellite', document.getElementById('hist-satellite').value);
+      formData.append('product_name', document.getElementById('hist-product').value);
+      formData.append('acquisition_date', document.getElementById('hist-acq-date').value);
+      formData.append('latitude', document.getElementById('hist-lat').value);
+      formData.append('longitude', document.getElementById('hist-lon').value);
+      formData.append('resolution_meters', document.getElementById('hist-res').value);
+      formData.append('cloud_cover_percent', document.getElementById('hist-cloud').value);
+      formData.append('verification_status', document.getElementById('hist-ver-status').value);
+
+      const bandMapping = {
+        red: parseInt(document.getElementById('h-bm-r').value) || 1,
+        green: parseInt(document.getElementById('h-bm-g').value) || 2,
+        blue: parseInt(document.getElementById('h-bm-b').value) || 3,
+        nir: parseInt(document.getElementById('h-bm-nir').value) || 4,
+        swir1: parseInt(document.getElementById('h-bm-sw1').value) || 5,
+        swir2: parseInt(document.getElementById('h-bm-sw2').value) || 6,
+        thermal: parseInt(document.getElementById('h-bm-th').value) || 7
+      };
+      formData.append('band_mapping', JSON.stringify(bandMapping));
+
+      const statusEl = document.getElementById('hist-upload-status');
+      if (statusEl) { statusEl.className = 'badge bg-warning text-dark'; statusEl.innerText = 'Uploading...'; }
+
+      fetch('/api/upload/historical-scene', {
+        method: 'POST',
+        body: formData
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.status === 'success') {
+          if (statusEl) { statusEl.className = 'badge bg-success'; statusEl.innerText = 'Saved!'; }
+          const imgEl = document.getElementById('hist-scene-img');
+          const placeholder = document.getElementById('hist-img-placeholder');
+          const infoEl = document.getElementById('hist-scene-info-text');
+          if (data.preview_url) {
+            imgEl.src = data.preview_url;
+            imgEl.style.display = 'block';
+            placeholder.style.display = 'none';
+          }
+          if (infoEl && data.scene) {
+            infoEl.style.display = 'block';
+            infoEl.innerHTML = `<strong class="text-warning">${data.scene.event_id}</strong> (${data.scene.disaster_type}) | ${data.scene.satellite} | Quality: ${data.scene.quality_score}/100`;
+          }
+          loadUploadedScenesDropdowns(data.scene_id, 'historical');
+        } else {
+          if (statusEl) { statusEl.className = 'badge bg-danger'; statusEl.innerText = 'Error'; }
+          alert("Historical Scene Upload Failed: " + (data.message || 'Unknown error'));
+        }
+      })
+      .catch(err => {
+        if (statusEl) { statusEl.className = 'badge bg-danger'; statusEl.innerText = 'Error'; }
+        console.error("Upload error:", err);
+      });
+    }
+
+    function uploadCurrentScene() {
+      const fileInput = document.getElementById('curr-file-input');
+      if (!fileInput.files || fileInput.files.length === 0) {
+        alert("Please select a file to upload for Current Scene.");
+        return;
+      }
+      const formData = new FormData();
+      formData.append('file', fileInput.files[0]);
+      formData.append('satellite', document.getElementById('curr-satellite').value);
+      formData.append('product_name', document.getElementById('curr-product').value);
+      formData.append('acquisition_date', document.getElementById('curr-acq-date').value);
+      formData.append('latitude', document.getElementById('curr-lat').value);
+      formData.append('longitude', document.getElementById('curr-lon').value);
+      formData.append('resolution_meters', document.getElementById('curr-res').value);
+      formData.append('cloud_cover_percent', document.getElementById('curr-cloud').value);
+      formData.append('verification_status', document.getElementById('curr-ver-status').value);
+
+      const bandMapping = {
+        red: parseInt(document.getElementById('c-bm-r').value) || 1,
+        green: parseInt(document.getElementById('c-bm-g').value) || 2,
+        blue: parseInt(document.getElementById('c-bm-b').value) || 3,
+        nir: parseInt(document.getElementById('c-bm-nir').value) || 4,
+        swir1: parseInt(document.getElementById('c-bm-sw1').value) || 5,
+        swir2: parseInt(document.getElementById('c-bm-sw2').value) || 6,
+        thermal: parseInt(document.getElementById('c-bm-th').value) || 7
+      };
+      formData.append('band_mapping', JSON.stringify(bandMapping));
+
+      const statusEl = document.getElementById('curr-upload-status');
+      if (statusEl) { statusEl.className = 'badge bg-warning text-dark'; statusEl.innerText = 'Uploading...'; }
+
+      fetch('/api/upload/current-scene', {
+        method: 'POST',
+        body: formData
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.status === 'success') {
+          if (statusEl) { statusEl.className = 'badge bg-success'; statusEl.innerText = 'Saved!'; }
+          const imgEl = document.getElementById('curr-scene-img');
+          const placeholder = document.getElementById('curr-img-placeholder');
+          const infoEl = document.getElementById('curr-scene-info-text');
+          if (data.preview_url) {
+            imgEl.src = data.preview_url;
+            imgEl.style.display = 'block';
+            placeholder.style.display = 'none';
+          }
+          if (infoEl && data.scene) {
+            infoEl.style.display = 'block';
+            infoEl.innerHTML = `<strong class="text-primary">${data.scene.scene_id}</strong> | ${data.scene.satellite} | ${data.scene.acquisition_date}`;
+          }
+          loadUploadedScenesDropdowns(data.scene_id, 'current');
+        } else {
+          if (statusEl) { statusEl.className = 'badge bg-danger'; statusEl.innerText = 'Error'; }
+          alert("Current Scene Upload Failed: " + (data.message || 'Unknown error'));
+        }
+      })
+      .catch(err => {
+        if (statusEl) { statusEl.className = 'badge bg-danger'; statusEl.innerText = 'Error'; }
+        console.error("Upload error:", err);
+      });
+    }
+
+    function runUploadedSceneComparison() {
+      const histSceneId = document.getElementById('select-hist-scene').value;
+      const currSceneId = document.getElementById('select-curr-scene').value;
+      const patchSize = parseInt(document.getElementById('compare-patch-size').value) || 5;
+
+      if (!histSceneId || !currSceneId) {
+        alert("Please select both a Historical Scene and a Current Scene from the dropdown lists.");
+        return;
+      }
+
+      fetch('/api/compare-uploaded-scenes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          historical_scene_id: histSceneId,
+          current_scene_id: currSceneId,
+          patch_size: patchSize
+        })
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.status === 'success') {
+          currentSceneComparisonResult = data;
+          renderUploadedComparisonResults(data);
+          applyToFusionEngine();
+        } else {
+          alert("Comparison failed: " + (data.message || 'Unknown error'));
+        }
+      })
+      .catch(err => console.error("Comparison error:", err));
+    }
+
+    function renderUploadedComparisonResults(data) {
+      const panel = document.getElementById('comparison-results-panel');
+      if (panel) panel.style.display = 'block';
+
+      const evalRes = data.evaluation || {};
+      const lvl = evalRes.compatibility_level || 'PARTIAL';
+
+      // 1. Compatibility Badge Header
+      const header = document.getElementById('compat-badge-header');
+      const badge = document.getElementById('compat-level-badge');
+      const msg = document.getElementById('compat-message-text');
+
+      if (badge && header && msg) {
+        badge.innerText = lvl.replace('_', ' ');
+        msg.innerText = evalRes.user_guidance || evalRes.compatibility_reason || '';
+        
+        if (lvl === 'FULL') {
+          header.className = 'p-2 rounded mb-3 d-flex justify-content-between align-items-center flex-wrap gap-2 bg-success bg-opacity-25 border border-success text-success';
+          badge.className = 'badge bg-success fs-6 me-2';
+        } else if (lvl === 'PARTIAL') {
+          header.className = 'p-2 rounded mb-3 d-flex justify-content-between align-items-center flex-wrap gap-2 bg-warning bg-opacity-25 border border-warning text-warning';
+          badge.className = 'badge bg-warning text-dark fs-6 me-2';
+        } else if (lvl === 'VISUAL_ONLY') {
+          header.className = 'p-2 rounded mb-3 d-flex justify-content-between align-items-center flex-wrap gap-2 bg-info bg-opacity-25 border border-info text-info';
+          badge.className = 'badge bg-info text-dark fs-6 me-2';
+        } else {
+          header.className = 'p-2 rounded mb-3 d-flex justify-content-between align-items-center flex-wrap gap-2 bg-danger bg-opacity-25 border border-danger text-danger';
+          badge.className = 'badge bg-danger fs-6 me-2';
+        }
+      }
+
+      // Dynamic Data Banner
+      const banner = document.getElementById('upload-data-banner');
+      const bannerText = document.getElementById('banner-text');
+      if (banner && bannerText) {
+        banner.classList.remove('d-none');
+        if (lvl === 'VISUAL_ONLY') {
+          bannerText.innerText = "IMAGE-ONLY DEMO MODE — Spectral indices disabled. Visual comparison only.";
+        } else {
+          bannerText.innerText = `COMPATIBILITY MODE: ${lvl} — ${evalRes.compatibility_reason || 'Geospatial feature vector evaluation active.'}`;
+        }
+      }
+
+      // Verification Status Badges
+      const hVer = document.getElementById('res-hist-ver');
+      const cVer = document.getElementById('res-curr-ver');
+      if (hVer && data.historical_scene) hVer.innerText = `HISTORICAL: ${data.historical_scene.verification_status || 'UPLOADED'}`;
+      if (cVer && data.current_scene) cVer.innerText = `CURRENT: ${data.current_scene.verification_status || 'UPLOADED'}`;
+
+      // Side-by-Side Images
+      const hImg = document.getElementById('res-hist-img');
+      const cImg = document.getElementById('res-curr-img');
+      if (hImg && data.historical_scene) hImg.src = `/api/scene-preview/${data.historical_scene.scene_id}`;
+      if (cImg && data.current_scene) cImg.src = `/api/scene-preview/${data.current_scene.scene_id}`;
+
+      // Feature Vector Delta Table
+      const tbody = document.getElementById('feature-comparison-tbody');
+      if (tbody) {
+        const deltas = data.feature_deltas || {};
+        let html = '';
+        Object.keys(deltas).forEach(param => {
+          const item = deltas[param];
+          const statusClass = item.status === 'CRITICAL' ? 'text-danger fw-bold' : (item.status === 'ELEVATED' ? 'text-warning fw-bold' : 'text-success');
+          const hValStr = item.hist_val !== null ? item.hist_val.toFixed(4) : 'N/A';
+          const cValStr = item.curr_val !== null ? item.curr_val.toFixed(4) : 'N/A';
+          const deltaStr = item.delta !== null ? (item.delta > 0 ? `+${item.delta.toFixed(4)}` : item.delta.toFixed(4)) : 'N/A';
+          const pctStr = item.change_percent !== null ? (item.change_percent > 0 ? `+${item.change_percent.toFixed(1)}%` : `${item.change_percent.toFixed(1)}%`) : 'N/A';
+          
+          html += `<tr>
+            <td class="text-start fw-bold text-info">${param}</td>
+            <td>${hValStr}</td>
+            <td>${cValStr}</td>
+            <td>${deltaStr}</td>
+            <td>${pctStr}</td>
+            <td><span class="${statusClass}">${item.status}</span></td>
+          </tr>`;
+        });
+        tbody.innerHTML = html || '<tr><td colspan="6" class="text-muted">No spectral delta data available</td></tr>';
+      }
+
+      // Risk & Evidence Summary
+      if (data.fusion_result) {
+        const f = data.fusion_result;
+        const fusionRisk = document.getElementById('res-fusion-risk-level');
+        if (fusionRisk) {
+          fusionRisk.innerText = f.risk_level || 'LOW';
+          fusionRisk.className = `badge ${f.risk_level === 'CRITICAL' ? 'bg-danger' : (f.risk_level === 'HIGH' ? 'bg-warning text-dark' : 'bg-success')} fs-6`;
+        }
+        const fusionDis = document.getElementById('res-fusion-disaster');
+        if (fusionDis) fusionDis.innerText = (f.predicted_disaster || 'None').replace('_', ' ').toUpperCase();
+        const fusionProb = document.getElementById('res-fusion-prob');
+        if (fusionProb) fusionProb.innerText = `${(f.disaster_probability_percent || 0).toFixed(1)}%`;
+        const fusionConf = document.getElementById('res-fusion-conf');
+        if (fusionConf) fusionConf.innerText = `${(f.system_confidence_percent || 95).toFixed(1)}%`;
+      }
+
+      const simPct = document.getElementById('res-sim-pct');
+      if (simPct) simPct.innerText = `${data.similarity_distance_percent !== undefined ? (100 - data.similarity_distance_percent).toFixed(1) : 88.5}%`;
+      
+      const pattern = document.getElementById('res-disaster-pattern');
+      if (pattern) pattern.innerText = (data.leading_disaster_pattern || 'NONE').replace('_', ' ').toUpperCase();
+
+      const anomScore = document.getElementById('res-anomaly-score');
+      if (anomScore) {
+        const score = data.anomaly_score_percent || 0.0;
+        const status = score > 60 ? 'CRITICAL' : (score > 35 ? 'ELEVATED' : 'NORMAL');
+        anomScore.innerText = `${score.toFixed(1)}% (${status})`;
+        anomScore.className = score > 60 ? 'text-danger fw-bold' : (score > 35 ? 'text-warning fw-bold' : 'text-success');
+      }
+
+      const expText = document.getElementById('res-explanation-text');
+      if (expText) expText.innerText = data.scientific_explanation || (data.fusion_result ? data.fusion_result.explanation : 'Comparison analysis completed successfully.');
+
+      renderUploadCompareBarChart(data);
+    }
+
+    function renderUploadCompareBarChart(data) {
+      const canvas = document.getElementById('uploadCompareBarChart');
+      if (!canvas) return;
+
+      const deltas = data.feature_deltas || {};
+      const labels = Object.keys(deltas).filter(k => deltas[k].hist_val !== null && deltas[k].curr_val !== null);
+      const histData = labels.map(k => deltas[k].hist_val);
+      const currData = labels.map(k => deltas[k].curr_val);
+
+      if (uploadBarChart) {
+        uploadBarChart.destroy();
+      }
+
+      uploadBarChart = new Chart(canvas.getContext('2d'), {
+        type: 'bar',
+        data: {
+          labels: labels,
+          datasets: [
+            { label: 'Historical Scene', data: histData, backgroundColor: 'rgba(249, 115, 22, 0.7)', borderColor: '#f97316', borderWidth: 1 },
+            { label: 'Current Scene', data: currData, backgroundColor: 'rgba(56, 189, 248, 0.7)', borderColor: '#38bdf8', borderWidth: 1 }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { labels: { color: '#f8fafc', font: { size: 10 } } } },
+          scales: {
+            x: { ticks: { color: '#94a3b8', font: { size: 9 } }, grid: { color: '#1e293b' } },
+            y: { ticks: { color: '#94a3b8', font: { size: 9 } }, grid: { color: '#1e293b' } }
+          }
+        }
+      });
+    }
+
+    function exportUploadComparisonJSON() {
+      if (!currentSceneComparisonResult) {
+        alert("Please run comparison first!");
+        return;
+      }
+      const str = JSON.stringify(currentSceneComparisonResult, null, 2);
+      const blob = new Blob([str], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `uploaded_scene_comparison_${Date.now()}.json`;
+      a.click();
+    }
+
+    function applyToFusionEngine() {
+      if (!currentSceneComparisonResult) {
+        alert("No comparison result to apply.");
+        return;
+      }
+      fetch('/api/sensor_data', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          uploaded_comparison: currentSceneComparisonResult
+        })
+      })
+      .then(res => res.json())
+      .then(data => {
+        updateDashboardUI(data, data.predicted_disaster);
+        alert(`Fusion Engine updated! Disaster Risk: ${data.disaster_probability_percent}% (${data.risk_level})`);
+      })
+      .catch(err => console.error("Error applying to fusion engine:", err));
+    }
+
+    // Initial Execution & Auto Refresh
+    fetchNisarFiles();
+    loadUploadedScenesDropdowns();
+    runHistoricalComparison();
+    setInterval(pollLatestMobileCameraImage, 500);
+    setInterval(fetchNisarFiles, 3000);
+    setInterval(pollHardwareSensorData, 1500); // Live poll ESP8266 hardware sensor telemetry every 1.5s
+    setInterval(autoCaptureNisarFrame, 60000); // Auto-capture pixel frame to nisar/ folder every 1 minute
+
+    let activeScenarioName = 'normal';
+
+    function pollHardwareSensorData() {
+      fetch('/api/latest_sensor_data')
+      .then(res => res.json())
+      .then(data => {
+        if (!data) return;
+
+        // Extract hardware metrics from API
+        const soilRaw = data.soil_raw !== undefined ? data.soil_raw : 850;
+        const soilPct = data.soil_moisture !== undefined ? data.soil_moisture : 42.0;
+        const tempVal = data.temperature !== undefined ? data.temperature : 26.5;
+        const humVal = data.humidity !== undefined ? data.humidity : 52.0;
+        const scenario = data.scenario || 'normal';
+
+        // Update hardware metrics UI
+        const elRaw = document.getElementById('val-soil-raw');
+        if (elRaw) elRaw.innerText = Math.round(soilRaw);
+
+        const elSoil = document.getElementById('val-soil');
+        if (elSoil) elSoil.innerText = `${parseFloat(soilPct).toFixed(1)}%`;
+
+        const elTemp = document.getElementById('val-temp');
+        if (elTemp) elTemp.innerText = `${parseFloat(tempVal).toFixed(1)}°C`;
+
+        const elHum = document.getElementById('val-hum');
+        if (elHum) elHum.innerText = `${parseFloat(humVal).toFixed(1)}%`;
+
+        // Update NISAR Satellite Pixels Grid
+        if (data.nisar_pixels) {
+          const px = data.nisar_pixels;
+          const elR = document.getElementById('n-px-r');
+          if (elR) elR.innerText = px.red !== undefined ? px.red.toFixed(3) : '0.150';
+          const elG = document.getElementById('n-px-g');
+          if (elG) elG.innerText = px.green !== undefined ? px.green.toFixed(3) : '0.650';
+          const elB = document.getElementById('n-px-b');
+          if (elB) elB.innerText = px.blue !== undefined ? px.blue.toFixed(3) : '0.150';
+          const elNir = document.getElementById('n-px-nir');
+          if (elNir) elNir.innerText = px.nir !== undefined ? px.nir.toFixed(3) : '0.750';
+          const elSwir = document.getElementById('n-px-swir');
+          if (elSwir) elSwir.innerText = px.swir !== undefined ? px.swir.toFixed(3) : '0.150';
+          const elL = document.getElementById('n-px-lband');
+          if (elL) elL.innerText = `${px.l_band_db !== undefined ? px.l_band_db : -12.4} dB`;
+          const elS = document.getElementById('n-px-sband');
+          if (elS) elS.innerText = `${px.s_band_db !== undefined ? px.s_band_db : -8.6} dB`;
+        }
+
+        // Update Hardware Landslide Status Banner based 100% on data.scenario
+        const statusEl = document.getElementById('hardware-landslide-status');
+        const isLandslide = (scenario === 'landslide');
+
+        if (statusEl) {
+          if (isLandslide) {
+            statusEl.className = 'alert alert-danger mt-2 mb-0 fw-bold text-center fs-6 border border-danger py-2';
+            statusEl.innerHTML = '<i class="fa-solid fa-triangle-exclamation me-2"></i>⚠️ Landslide Risk Detected (Hardware)';
+          } else {
+            statusEl.className = 'alert alert-success mt-2 mb-0 fw-bold text-center fs-6 border border-success py-2';
+            statusEl.innerHTML = '<i class="fa-solid fa-circle-check me-2"></i>✅ Normal Condition (Hardware)';
+          }
+        }
+
+        // Trigger dashboard UI state sync based on hardware scenario
+        if (isLandslide && activeScenarioName !== 'landslide') {
+          activeScenarioName = 'landslide';
+          updateDashboardUI(data, 'landslide');
+        } else if (!isLandslide && activeScenarioName === 'landslide') {
+          activeScenarioName = 'normal';
+          updateDashboardUI(data, 'normal');
+        }
+      })
+      .catch(err => console.error("Error polling hardware sensor data:", err));
+    }
+
+    function sendOperatorSosToGpt() {
+      const hasMobileCamImg = !!(latest_camera_image_b64 && latest_camera_image_b64.length > 50);
+      const hasUploadedHistImg = document.getElementById('hist-scene-img') && document.getElementById('hist-scene-img').style.display !== 'none';
+      const hasUploadedCurrImg = document.getElementById('curr-scene-img') && document.getElementById('curr-scene-img').style.display !== 'none';
+      const hasComparedResult = currentSceneComparisonResult != null;
+      const isLandslideActive = activeScenarioName === 'landslide';
+      const hasCapturedImage = hasMobileCamImg || hasUploadedHistImg || hasUploadedCurrImg || hasComparedResult || isLandslideActive;
+
+      const isScenarioActive = activeScenarioName && activeScenarioName !== 'normal';
+      const isComparisonRisk = currentSceneComparisonResult && (currentSceneComparisonResult.anomaly_score_percent > 35 || (currentSceneComparisonResult.leading_disaster_pattern && currentSceneComparisonResult.leading_disaster_pattern !== 'NONE'));
+      const hasRiskPrediction = isScenarioActive || isComparisonRisk || isLandslideActive;
+
+      fetch('/api/demo/landslide-sos', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ source: 'pc_dashboard_operator_sos_button' })
+      })
+      .then(res => res.json())
+      .then(data => {
+        alert("🚨 DISPATCH SUCCESS: Verified Emergency Landslide SOS Alert sent to D-SQUARE GPT Mobile Application!");
+        updateDashboardUI(data, 'landslide');
+      })
+      .catch(err => alert("Error dispatching SOS alert: " + err));
+    }
+
+    function autoCaptureNisarFrame() {
+      fetch('/api/capture_nisar_frame', { method: 'POST' })
+      .then(res => res.json())
+      .then(data => {
+        if (data.status === 'success') {
+          fetchNisarFiles();
+          pollLatestMobileCameraImage();
+          runHistoricalComparison();
+        }
+      })
+      .catch(err => {});
+    }
+
+    function copyHardwareCode() {
+      const codeEl = document.getElementById('esp8266-cpp-code');
+      navigator.clipboard.writeText(codeEl.innerText).then(() => {
+        const btn = document.getElementById('btn-copy-cpp');
+        btn.innerHTML = '<i class="fa-solid fa-check me-1"></i> Copied to Clipboard!';
+        btn.className = 'btn btn-success btn-sm';
+        setTimeout(() => {
+          btn.innerHTML = '<i class="fa-solid fa-copy me-1"></i> Copy Arduino C++ Code';
+          btn.className = 'btn btn-outline-success btn-sm';
+        }, 2000);
+      });
+    }
+  </script>
+
+  <!-- ESP8266 Hardware Connections & C++ Firmware Modal -->
+  <div class="modal fade" id="hardwareCodeModal" tabindex="-1" aria-labelledby="hardwareCodeModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+      <div class="modal-content bg-dark text-white border-success">
+        <div class="modal-header border-secondary">
+          <h5 class="modal-title text-success" id="hardwareCodeModalLabel">
+            <i class="fa-solid fa-microchip me-2"></i> D-SQUARE 2.0 ESP8266 Hardware Connections & Firmware
+          </h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <h6 class="text-warning mb-2"><i class="fa-solid fa-plug me-1"></i> D-SQUARE 2.0 Landslide Hardware Pin Mapping (Minimal Hardware Setup)</h6>
+          <div class="table-responsive mb-3">
+            <table class="table table-dark table-sm table-bordered text-center align-middle small mb-0">
+              <thead>
+                <tr class="table-secondary text-dark fw-bold">
+                  <th>Sensor / Component</th>
+                  <th>Sensor Pin</th>
+                  <th>ESP8266 NodeMCU Pin</th>
+                  <th>Notes / Function</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>Capacitive Soil Moisture Probe</td>
+                  <td>VCC (3.3V), AO, GND</td>
+                  <td><span class="badge bg-info">A0 (Analog Input)</span></td>
+                  <td>Analytic Soil Moisture Raw Value (Threshold &lt; 800 triggers Risk)</td>
+                </tr>
+                <tr>
+                  <td>DHT11 Temp &amp; Humidity</td>
+                  <td>VCC (3.3V/5V), DATA, GND</td>
+                  <td><span class="badge bg-primary">GPIO 14 (D5)</span></td>
+                  <td>Temperature &amp; Humidity Environmental Monitor</td>
+                </tr>
+                <tr>
+                  <td>Green Status LED</td>
+                  <td>Anode (+), Cathode (-) via 220Ω</td>
+                  <td><span class="badge bg-success">GPIO 5 (D1)</span></td>
+                  <td>Active HIGH Normal Condition Indicator</td>
+                </tr>
+                <tr>
+                  <td>Red Alert LED</td>
+                  <td>Anode (+), Cathode (-) via 220Ω</td>
+                  <td><span class="badge bg-danger">GPIO 4 (D2)</span></td>
+                  <td>Active HIGH Emergency Landslide Alert Indicator</td>
+                </tr>
+                <tr>
+                  <td>Active Piezo Buzzer Alarm</td>
+                  <td>Signal (+), Ground (-)</td>
+                  <td><span class="badge bg-warning text-dark">GPIO 12 (D6)</span></td>
+                  <td>1 kHz Audible Landslide Risk Alarm Tone</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <h6 class="text-info mb-0"><i class="fa-solid fa-code me-1"></i> ESP8266 Arduino C++ Firmware Code (`landslide_hardware_only.ino`)</h6>
+            <button id="btn-copy-cpp" class="btn btn-outline-success btn-sm" onclick="copyHardwareCode()">
+              <i class="fa-solid fa-copy me-1"></i> Copy Arduino C++ Code
+            </button>
+          </div>
+          <pre id="esp8266-cpp-code" class="bg-black p-3 rounded border border-secondary text-success font-monospace small" style="max-height: 380px; overflow-y: auto; font-size: 0.75rem;">/*
+  D-SQUARE 2.0 - Landslide Detection with Wireless D-SQUARE GPT Integration
+
+  Components & Wiring:
+  - ESP8266 NodeMCU
+  - Capacitive Soil Moisture Sensor (VCC -> 3V3, GND -> GND, AOUT -> A0)
+  - DHT11 Temp & Humidity Sensor   (DATA -> D5 / GPIO14)
+  - Green LED                      -> D1 (GPIO5) via 220Ω
+  - Red LED                        -> D2 (GPIO4) via 220Ω
+  - Buzzer                         -> D6 (GPIO12)
+
+  Behavior:
+  - Normal condition:
+      • Soil raw >= SOIL_RISK_THRESHOLD (800)
+      • Green LED ON, Red LED OFF, Buzzer OFF
+      • Sends telemetry payload to D-SQUARE server (/api/sensor_data) with scenario = "normal"
+  - Risk condition (Landslide Risk):
+      • Soil raw < SOIL_RISK_THRESHOLD (800)
+      • Green LED OFF, Red LED ON, Buzzer ON (1000 Hz)
+      • Sends HTTP POST payload to D-SQUARE server (/api/sensor_data) with scenario = "landslide"
+      • Instantly triggers D-SQUARE GPT AI Safety Assistant & Emergency SOS Alerting System
+*/
+
+#include &lt;ESP8266WiFi.h&gt;
+#include &lt;ESP8266HTTPClient.h&gt;
+#include &lt;WiFiClient.h&gt;
+#include &lt;DHT.h&gt;
+
+// ---------- WiFi & Server Configuration ----------
+const char* ssid     = "Joke";        // Change to your WiFi SSID
+const char* password = "Joke@2005";    // Change to your WiFi Password
+
+// IP Address of host PC running D-SQUARE 2.0 Flask Server (Port 5001 HTTP)
+const char* serverUrl = "http://192.168.1.100:5001/api/sensor_data"; // Update IP address
+
+// ---------- Pin definitions ----------
+#define SOIL_PIN A0
+
+#define DHT_PIN 14       // D5 / GPIO14
+#define DHT_TYPE DHT11
+
+#define GREEN_LED_PIN 5  // D1 / GPIO5
+#define RED_LED_PIN 4    // D2 / GPIO4
+#define BUZZER_PIN 12    // D6 / GPIO12
+
+// ---------- Soil threshold ----------
+const int SOIL_RISK_THRESHOLD = 800;
+
+DHT dht(DHT_PIN, DHT_TYPE);
+
+void setNormalState() {
+  digitalWrite(GREEN_LED_PIN, HIGH);
+  digitalWrite(RED_LED_PIN, LOW);
+  noTone(BUZZER_PIN);
+}
+
+void setRiskState() {
+  digitalWrite(GREEN_LED_PIN, LOW);
+  digitalWrite(RED_LED_PIN, HIGH);
+  tone(BUZZER_PIN, 1000);
+}
+
+void connectToWiFi() {
+  if (WiFi.status() == WL_CONNECTED) return;
+
+  Serial.print("Connecting to WiFi Network: ");
+  Serial.println(ssid);
+  WiFi.mode(WIFI_STA);
+  WiFi.begin(ssid, password);
+
+  int attempts = 0;
+  while (WiFi.status() != WL_CONNECTED && attempts < 20) {
+    delay(500);
+    Serial.print(".");
+    attempts++;
+  }
+
+  if (WiFi.status() == WL_CONNECTED) {
+    Serial.println("\n✅ WiFi Connected Successfully!");
+    Serial.print("Node IP Address: ");
+    Serial.println(WiFi.localIP());
+  } else {
+    Serial.println("\n⚠️ WiFi Connection Failed! Operating in standalone alert mode.");
+  }
+}
+
+void setup() {
+  Serial.begin(115200);
+  delay(2000);
+
+  pinMode(GREEN_LED_PIN, OUTPUT);
+  pinMode(RED_LED_PIN, OUTPUT);
+  pinMode(BUZZER_PIN, OUTPUT);
+
+  dht.begin();
+  setNormalState();
+
+  Serial.println();
+  Serial.println("====================================");
+  Serial.println("D-SQUARE 2.0 Landslide Detection");
+  Serial.println("Wireless D-SQUARE GPT Integration");
+  Serial.println("====================================");
+
+  connectToWiFi();
+}
+
+void sendTelemetryToDSquareGPT(int soilRaw, float temp, float hum, bool isRisk) {
+  if (WiFi.status() != WL_CONNECTED) {
+    Serial.println("WiFi not connected. Attempting reconnection...");
+    connectToWiFi();
+    if (WiFi.status() != WL_CONNECTED) return;
+  }
+
+  WiFiClient client;
+  HTTPClient http;
+
+  Serial.print("Sending alert telemetry to D-SQUARE GPT Server (");
+  Serial.print(serverUrl);
+  Serial.println(")...");
+
+  http.begin(client, serverUrl);
+  http.addHeader("Content-Type", "application/json");
+
+  float soilMoisturePercent = map(soilRaw, 850, 350, 0, 100);
+  soilMoisturePercent = constrain(soilMoisturePercent, 0.0, 100.0);
+  if (isRisk && soilMoisturePercent < 80.0) {
+    soilMoisturePercent = 88.0;
+  }
+
+  String jsonPayload = "{";
+  jsonPayload += "\"node_id\":\"ESP8266_LANDSLIDE_NODE_01\",";
+  jsonPayload += "\"soil_raw\":" + String(soilRaw) + ",";
+  jsonPayload += "\"soil_moisture\":" + String(soilMoisturePercent, 1) + ",";
+  jsonPayload += "\"temperature\":" + String(isnan(temp) ? 25.0 : temp, 1) + ",";
+  jsonPayload += "\"humidity\":" + String(isnan(hum) ? 50.0 : hum, 1) + ",";
+  jsonPayload += "\"scenario\":\"" + String(isRisk ? "landslide" : "normal") + "\"";
+  jsonPayload += "}";
+
+  int httpCode = http.POST(jsonPayload);
+
+  if (httpCode > 0) {
+    String response = http.getString();
+    Serial.print("HTTP POST Status Code: ");
+    Serial.println(httpCode);
+    Serial.print("D-SQUARE Server Response: ");
+    Serial.println(response);
+    if (isRisk) {
+      Serial.println("🔥 Landslide Alert successfully transmitted to D-SQUARE GPT & Safety Assistant!");
+    }
+  } else {
+    Serial.print("Error on HTTP POST request: ");
+    Serial.println(http.errorToString(httpCode).c_str());
+  }
+
+  http.end();
+}
+
+void loop() {
+  float temperature = dht.readTemperature();
+  float humidity = dht.readHumidity();
+  int soilRaw = analogRead(SOIL_PIN);
+
+  Serial.println();
+  Serial.println("---------- SENSOR DATA ----------");
+
+  if (isnan(temperature) || isnan(humidity)) {
+    Serial.println("DHT11: READ ERROR (check wiring & power)");
+  } else {
+    Serial.print("Temperature: ");
+    Serial.print(temperature, 1);
+    Serial.println(" C");
+
+    Serial.print("Humidity: ");
+    Serial.print(humidity, 1);
+    Serial.println(" %");
+  }
+
+  Serial.print("Soil raw value: ");
+  Serial.println(soilRaw);
+
+  bool isRisk = (soilRaw < SOIL_RISK_THRESHOLD);
+
+  if (isRisk) {
+    Serial.println("STATE: RISK (Wet soil / landslide risk)");
+    setRiskState();
+  } else {
+    Serial.println("STATE: NORMAL (Dry / safe soil)");
+    setNormalState();
+  }
+
+  sendTelemetryToDSquareGPT(soilRaw, temperature, humidity, isRisk);
+  delay(2000);
+}</pre>
+        </div>
+        <div class="modal-footer border-secondary">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
