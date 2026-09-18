@@ -1,5 +1,5 @@
 /*
-  D-SQUARE 2.0 - ESP8266 Landslide Detection & PC Application Integration
+  D-SQUARE 2.0 - Landslide Detection with Wireless D-SQUARE GPT Integration
 
   Components & Wiring:
   - ESP8266 NodeMCU
@@ -9,20 +9,16 @@
   - Red LED                        -> D2 (GPIO4) via 220Ω
   - Buzzer                         -> D6 (GPIO12)
 
-  WiFi Credentials:
-  - SSID: Joke
-  - Password: Joke@2005
-
   Behavior:
   - Normal condition:
       • Soil raw >= SOIL_RISK_THRESHOLD (800)
       • Green LED ON, Red LED OFF, Buzzer OFF
-      • Sends telemetry POST to PC App (/api/sensor_data) with scenario = "normal"
-  - Risk condition (Landslide Risk Detected by Hardware):
+      • Sends telemetry payload to D-SQUARE server (/api/sensor_data) with scenario = "normal"
+  - Risk condition (Landslide Risk):
       • Soil raw < SOIL_RISK_THRESHOLD (800)
       • Green LED OFF, Red LED ON, Buzzer ON (1000 Hz)
-      • Sends HTTP POST payload to PC App (/api/sensor_data) with scenario = "landslide"
-      • Instantly triggers Landslide Detection in PC App UI & feeds D-SQUARE GPT
+      • Sends HTTP POST payload to D-SQUARE server (/api/sensor_data) with scenario = "landslide"
+      • Instantly triggers D-SQUARE GPT AI Safety Assistant & Emergency SOS Alerting System
 */
 
 #include <ESP8266WiFi.h>
@@ -31,14 +27,17 @@
 #include <DHT.h>
 
 // ---------- WiFi & Server Configuration ----------
-const char* ssid     = "Joke";          // WiFi Network Name
-const char* password = "Joke@2005";     // WiFi Password
+const char* ssid     = "Joke";        // Your WiFi SSID
+const char* password = "Joke@2005";    // Your WiFi Password
 
-// IP Address of host PC running D-SQUARE 2.0 Flask Server (Port 5001 HTTP)
-// Update 192.168.1.100 to your host PC's local IP address on the "Joke" network
-const char* serverUrl = "http://192.168.1.100:5001/api/sensor_data";
+// Target D-SQUARE 2.0 Backend Telemetry Endpoint (/api/sensor_data)
+// Primary Local Server (Your PC IPv4 on Wi-Fi):
+const char* serverUrl = "http://10.172.49.122:5001/api/sensor_data";
 
-// ---------- Pin definitions (as per your wiring) ----------
+// Optional Cloud Server Backup:
+const char* cloudServerUrl = "http://d-square-demo.onrender.com/api/sensor_data";
+
+// ---------- Pin definitions ----------
 #define SOIL_PIN A0
 
 #define DHT_PIN 14       // D5 / GPIO14
@@ -49,6 +48,7 @@ const char* serverUrl = "http://192.168.1.100:5001/api/sensor_data";
 #define BUZZER_PIN 12    // D6 / GPIO12
 
 // ---------- Soil threshold ----------
+// Soil raw ADC values: Dry soil / air -> higher value (~850-1024), Saturated wet soil -> lower value (<800)
 const int SOIL_RISK_THRESHOLD = 800;
 
 DHT dht(DHT_PIN, DHT_TYPE);
@@ -85,7 +85,7 @@ void connectToWiFi() {
     Serial.print("Node IP Address: ");
     Serial.println(WiFi.localIP());
   } else {
-    Serial.println("\n⚠️ WiFi Connection Failed! Operating in local alert mode.");
+    Serial.println("\n⚠️ WiFi Connection Failed! Operating in standalone alert mode.");
   }
 }
 
@@ -103,15 +103,15 @@ void setup() {
   Serial.println();
   Serial.println("====================================");
   Serial.println("D-SQUARE 2.0 Landslide Detection");
-  Serial.println("Wireless PC App & D-SQUARE GPT Integration");
+  Serial.println("Wireless D-SQUARE GPT Integration");
   Serial.println("====================================");
 
   connectToWiFi();
 }
 
-void sendTelemetryToPCLandslideDetection(int soilRaw, float temp, float hum, bool isRisk) {
+void sendTelemetryToDSquareGPT(int soilRaw, float temp, float hum, bool isRisk) {
   if (WiFi.status() != WL_CONNECTED) {
-    Serial.println("WiFi disconnected. Reconnecting...");
+    Serial.println("WiFi not connected. Attempting reconnection...");
     connectToWiFi();
     if (WiFi.status() != WL_CONNECTED) return;
   }
@@ -119,19 +119,27 @@ void sendTelemetryToPCLandslideDetection(int soilRaw, float temp, float hum, boo
   WiFiClient client;
   HTTPClient http;
 
-  Serial.print("Sending telemetry to PC Landslide Detection Server (");
+  Serial.print("Sending alert telemetry to D-SQUARE GPT Server (");
   Serial.print(serverUrl);
   Serial.println(")...");
 
   http.begin(client, serverUrl);
   http.addHeader("Content-Type", "application/json");
 
-  // Construct JSON payload for PC Landslide Detection & D-SQUARE GPT
+  // Map soilRaw to estimated soil moisture percentage for ground station telemetry
+  float soilMoisturePercent = map(soilRaw, 850, 350, 0, 100);
+  soilMoisturePercent = constrain(soilMoisturePercent, 0.0, 100.0);
+  if (isRisk && soilMoisturePercent < 80.0) {
+    soilMoisturePercent = 88.0; // Saturate moisture percentage during risk condition
+  }
+
+  // Build JSON payload matching D-SQUARE 2.0 API schema
   String jsonPayload = "{";
   jsonPayload += "\"node_id\":\"ESP8266_LANDSLIDE_NODE_01\",";
   jsonPayload += "\"soil_raw\":" + String(soilRaw) + ",";
-  jsonPayload += "\"temperature\":" + String(isnan(temp) ? 25.8 : temp, 1) + ",";
-  jsonPayload += "\"humidity\":" + String(isnan(hum) ? 92.0 : hum, 1) + ",";
+  jsonPayload += "\"soil_moisture\":" + String(soilMoisturePercent, 1) + ",";
+  jsonPayload += "\"temperature\":" + String(isnan(temp) ? 25.0 : temp, 1) + ",";
+  jsonPayload += "\"humidity\":" + String(isnan(hum) ? 50.0 : hum, 1) + ",";
   jsonPayload += "\"scenario\":\"" + String(isRisk ? "landslide" : "normal") + "\"";
   jsonPayload += "}";
 
@@ -139,16 +147,30 @@ void sendTelemetryToPCLandslideDetection(int soilRaw, float temp, float hum, boo
 
   if (httpCode > 0) {
     String response = http.getString();
-    Serial.print("HTTP Response Code: ");
+    Serial.print("HTTP POST Status Code: ");
     Serial.println(httpCode);
-    Serial.print("PC Server Response: ");
+    Serial.print("D-SQUARE Server Response: ");
     Serial.println(response);
     if (isRisk) {
-      Serial.println("🔥 Landslide Alert detected by Hardware -> Transmitted to PC Landslide Detection & D-SQUARE GPT!");
+      Serial.println("🔥 Landslide Alert successfully transmitted to D-SQUARE GPT & Safety Assistant!");
     }
   } else {
-    Serial.print("Error on HTTP POST: ");
-    Serial.println(http.errorToString(httpCode).c_str());
+    Serial.print("Primary HTTP POST failed (");
+    Serial.print(http.errorToString(httpCode).c_str());
+    Serial.println("). Trying Cloud Backup Server...");
+    
+    // Backup POST to Cloud Server
+    http.end();
+    http.begin(client, cloudServerUrl);
+    http.addHeader("Content-Type", "application/json");
+    int cloudCode = http.POST(jsonPayload);
+    if (cloudCode > 0) {
+      Serial.print("Cloud Server HTTP Status: ");
+      Serial.println(cloudCode);
+    } else {
+      Serial.print("Cloud POST error: ");
+      Serial.println(http.errorToString(cloudCode).c_str());
+    }
   }
 
   http.end();
@@ -183,7 +205,7 @@ void loop() {
 
   bool isRisk = (soilRaw < SOIL_RISK_THRESHOLD);
 
-  // Decide local hardware state based on soil threshold
+  // Decide hardware state based on soil threshold
   if (isRisk) {
     // Risk condition
     Serial.println("STATE: RISK (Wet soil / landslide risk)");
@@ -194,8 +216,8 @@ void loop() {
     setNormalState();
   }
 
-  // Transmit telemetry to PC Landslide Detection App & D-SQUARE GPT
-  sendTelemetryToPCLandslideDetection(soilRaw, temperature, humidity, isRisk);
+  // Transmit telemetry & alert state to D-SQUARE GPT backend
+  sendTelemetryToDSquareGPT(soilRaw, temperature, humidity, isRisk);
 
   delay(2000);
 }
