@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>D-SQUARE GPT — Mobile Satellite & Landslide SOS Simulation</title>
+  <!-- Bootstrap 5 CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- FontAwesome Icons -->
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+  <!-- Leaflet Map CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <!-- Mobile SOS Stylesheet -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/mobile_sos.css') }}">
+</head>
+<body>
+
+  <!-- Persistent Demo Banner at Top -->
+  <div class="bg-warning text-dark text-center fw-bold py-2 px-3 small border-bottom border-dark shadow-sm" style="font-size: 0.85rem;">
+    <i class="fa-solid fa-triangle-exclamation me-1"></i> DEMO / SIMULATION MODE — NO REAL EMERGENCY ALERT HAS BEEN ISSUED.
+    <div style="font-size: 0.73rem; font-weight: normal;">This is a D-SQUARE prototype demonstration.</div>
+  </div>
+
+  <!-- Top Emergency Header -->
+  <div class="sos-header py-2 px-3 bg-dark border-bottom border-secondary">
+    <div class="d-flex justify-content-between align-items-center">
+      <div class="d-flex align-items-center gap-2">
+        <i class="fa-solid fa-brain text-info fa-lg"></i>
+        <div>
+          <h5 class="mb-0 sos-title text-white fw-bold">D-SQUARE GPT</h5>
+          <small class="text-muted" style="font-size: 0.7rem;">Receiving Ground Station & Satellite Hardware Alerts</small>
+        </div>
+      </div>
+      <div class="d-flex align-items-center gap-2">
+        <span class="badge bg-warning text-dark fw-bold" id="data-mode-badge">DEMO_SIMULATION</span>
+        <span class="badge bg-success" id="system-status-badge">🟢 AWAITING SIMULATED ALERT</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="mobile-container p-2">
+
+
+
+    <!-- 2. Main Active Alert Card -->
+    <div class="card-sos card-alert-active mb-3" id="active-alert-card" style="display: none; border-color: #ef4444;">
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <span class="badge bg-danger fs-6" id="alert-severity-badge">CRITICAL RISK</span>
+        <span class="small text-muted" id="sim-timestamp">Updated Just Now</span>
+      </div>
+      <h4 class="text-danger fw-bold mb-1" id="alert-disaster-title">
+        <i class="fa-solid fa-triangle-exclamation text-danger me-1"></i> CRITICAL LANDSLIDE RISK
+      </h4>
+      <div class="small text-warning fw-semibold mb-2" id="alert-distance-text">Distance to Hazard Zone: 0.0 km (Simulated Ground Node)</div>
+      <p class="small text-white mb-2 p-2 bg-black bg-opacity-75 rounded border border-danger" id="alert-warning-body">
+        DEMO: High soil moisture and humidity indicate simulated slope-instability risk. Follow official authority guidance in a real event.
+      </p>
+      <div class="d-flex justify-content-between align-items-center small text-muted" style="font-size: 0.72rem;">
+        <span>Node: <strong class="text-info" id="sim-node-label">SIMULATED_ESP8266_LANDSLIDE_01</strong></span>
+        <span>Source: Simulated ESP8266 Telemetry</span>
+      </div>
+    </div>
+
+    <!-- Default No Active Alert Card -->
+    <div class="card-sos mb-3" id="no-alert-card">
+      <div class="d-flex align-items-center gap-2">
+        <i class="fa-solid fa-circle-check text-success fa-2x"></i>
+        <div>
+          <h6 class="mb-0 text-success fw-bold">Awaiting Simulated Alert</h6>
+          <small class="text-muted" id="no-alert-status-text" style="font-size: 0.75rem;">
+            Click <strong>"Landslide"</strong> in Live Scenario Test Injector on Dashboard (http://127.0.0.1:5001/) to simulate.
+          </small>
+        </div>
+      </div>
+    </div>
+
+    <!-- 3. Three Large Action Buttons -->
+    <div class="row g-2 mb-3">
+      <div class="col-12">
+        <a href="tel:112" class="btn-sos-large btn-call-112 w-100 d-block text-center text-decoration-none py-3 fw-bold" id="call-112-link" onclick="handleCall112Click(event)">
+          <i class="fa-solid fa-phone-flip fa-lg me-1"></i> CALL 112 NOW
+        </a>
+      </div>
+      <div class="col-6">
+        <button class="btn-sos-large btn-send-sos w-100 py-3 fw-bold" onclick="handleSimulateSosClick()">
+          <i class="fa-solid fa-paper-plane me-1"></i> SIMULATE SOS TO TRUSTED CONTACTS
+        </button>
+      </div>
+      <div class="col-6">
+        <button class="btn-sos-large btn-show-shelters w-100 py-3 fw-bold" onclick="scrollToRiskMap()">
+          <i class="fa-solid fa-map-location-dot me-1"></i> VIEW RISK MAP
+        </button>
+      </div>
+    </div>
+
+    <!-- 4. Live Safety Map Card -->
+    <div class="card-sos p-2 mb-3" id="mobile-map-card">
+      <div class="d-flex justify-content-between align-items-center mb-2 px-1">
+        <span class="small fw-bold text-info"><i class="fa-solid fa-map-location-dot me-1"></i> Risk & Simulated Safe Zone Map</span>
+        <button class="btn btn-outline-info btn-sm py-0 px-2" onclick="requestLocationPermission()" style="font-size: 0.7rem;">
+          <i class="fa-solid fa-crosshairs me-1"></i> My Location
+        </button>
+      </div>
+      <div id="mobile-map" style="height: 240px; border-radius: 8px;"></div>
+      <div class="d-flex justify-content-between align-items-center mt-2 small text-muted px-1" style="font-size: 0.72rem;">
+        <span><i class="fa-solid fa-circle text-info me-1"></i> You</span>
+        <span><i class="fa-solid fa-circle text-danger me-1"></i> Simulated Landslide Node</span>
+        <span><i class="fa-solid fa-circle text-success me-1"></i> DEMO SAFE ZONE</span>
+      </div>
+    </div>
+
+    <!-- 5. Safety Instructions Card -->
+    <div class="card-sos mb-3 border-warning">
+      <h6 class="text-warning mb-2 fw-bold">
+        <i class="fa-solid fa-shield-halved me-2"></i> What should I do in a real landslide warning?
+      </h6>
+      <div class="escape-tips-container" style="font-size: 0.8rem;">
+        <div class="p-1 mb-1 text-white"><i class="fa-solid fa-person-running text-warning me-2"></i> Move away from steep slopes, gullies, river channels, and unstable ground if safe.</div>
+        <div class="p-1 mb-1 text-white"><i class="fa-solid fa-ban text-danger me-2"></i> Avoid roads near active slopes and do not return after a landslide.</div>
+        <div class="p-1 mb-1 text-white"><i class="fa-solid fa-eye text-info me-2"></i> Watch for falling rocks, cracks, leaning trees, or unusual sounds.</div>
+        <div class="p-1 mb-1 text-white"><i class="fa-solid fa-hand-holding-hand text-success me-2"></i> Help children, elderly people, and people with disabilities move to a safer place.</div>
+        <div class="p-1 text-white"><i class="fa-solid fa-phone text-danger me-2"></i> For immediate danger, injury, or entrapment, call 112 and follow local authority instructions.</div>
+      </div>
+    </div>
+
+    <!-- 6. D-SQUARE GPT Intelligence Assistant Card -->
+    <div class="card-sos mb-3">
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <h6 class="text-info mb-0 fw-bold"><i class="fa-solid fa-robot me-2"></i> D-SQUARE GPT Assistant</h6>
+        <span class="badge bg-primary" style="font-size: 0.65rem;">SATELLITE & WEATHER AI</span>
+      </div>
+
+      <!-- Quick Intelligence Category Chips -->
+      <div class="d-flex gap-2 overflow-x-auto py-1 mb-2" style="scrollbar-width: none;">
+        <span class="quick-chip" onclick="sendAssistantQuery('What is NISAR SAR radar?')">🛰️ What is NISAR SAR?</span>
+        <span class="quick-chip" onclick="sendAssistantQuery('Landslide warning rules & slope safety')">⛰️ Landslide Guidance</span>
+        <span class="quick-chip" onclick="sendAssistantQuery('Ground station status and telemetry')">📟 Ground Station Telemetry</span>
+        <span class="quick-chip" onclick="sendAssistantQuery('Monsoon forecast & heavy rain alerts')">🌧️ Monsoon Forecast</span>
+      </div>
+
+      <!-- Chat Messages Scroll Container -->
+      <div class="chat-container mb-2" id="chat-messages-container">
+        <div class="chat-bubble chat-bubble-assistant">
+          👋 Welcome to <strong>D-SQUARE GPT</strong>! Ask me about NISAR SAR radar, monsoon weather, simulated ground station telemetry, or landslide safety. For immediate danger, call 112.
+        </div>
+      </div>
+
+      <!-- Chat Input Field -->
+      <div class="input-group input-group-sm">
+        <input type="text" class="form-control bg-dark text-white border-secondary" id="assistant-input" placeholder="Ask D-SQUARE GPT..." onkeypress="if(event.key==='Enter') sendAssistantQuery()">
+        <button class="btn btn-info fw-bold" onclick="sendAssistantQuery()"><i class="fa-solid fa-paper-plane me-1"></i> Ask</button>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Modal 1: Desktop 112 Confirmation Modal -->
+  <div class="modal fade" id="call112ConfirmModal" tabindex="-1" aria-labelledby="call112ModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content bg-dark text-white border-warning">
+        <div class="modal-header border-secondary">
+          <h5 class="modal-title text-warning" id="call112ModalLabel">
+            <i class="fa-solid fa-triangle-exclamation me-2"></i> Demo Safety Notice
+          </h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="p-3 bg-black rounded border border-warning text-center mb-3">
+            <h6 class="text-warning fw-bold mb-2">This is a demo. Calling 112 is only for a real emergency.</h6>
+            <p class="small text-muted mb-0">
+              In a real disaster, pressing this button dials 112 directly on your mobile device. Are you sure you wish to initiate a dialer test call?
+            </p>
+          </div>
+        </div>
+        <div class="modal-footer border-secondary justify-content-between">
+          <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel Demo Test</button>
+          <button type="button" class="btn btn-danger btn-sm fw-bold" onclick="confirmCall112Proceed()">
+            <i class="fa-solid fa-phone me-1"></i> Proceed to Dial 112
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal 2: Simulated SOS Success Modal -->
+  <div class="modal fade" id="simulateSosModal" tabindex="-1" aria-labelledby="simulateSosModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content bg-dark text-white border-success">
+        <div class="modal-header border-secondary">
+          <h5 class="modal-title text-success" id="simulateSosModalLabel">
+            <i class="fa-solid fa-circle-check me-2"></i> Demo SOS Recorded
+          </h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="p-3 bg-black rounded border border-success mb-3 text-center">
+            <h6 class="text-success fw-bold mb-2">Demo SOS recorded. No real message was sent.</h6>
+            <p class="small text-muted mb-2">
+              The following simulated SOS payload has been formatted for location sharing demonstration:
+            </p>
+            <div class="p-2 bg-dark rounded border border-secondary text-info font-monospace small text-start">
+              DEMO SOS: Potential landslide risk. Location sharing would occur here in a real deployment.
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer border-secondary">
+          <button type="button" class="btn btn-success btn-sm fw-bold" data-bs-dismiss="modal">OK / Close</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bootstrap 5 JS -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <!-- Leaflet JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <!-- Mobile SOS JS -->
+  <script src="{{ url_for('static', filename='js/mobile_sos.js') }}"></script>
+</body>
+</html>

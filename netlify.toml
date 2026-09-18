@@ -1,8 +1,17 @@
 [build]
-  command = "pip install -r requirements.txt"
-  functions = "functions"
+  publish = "templates"
+
+[[redirects]]
+  from = "/mobile_sos"
+  to = "/mobile_sos.html"
+  status = 200
+
+[[redirects]]
+  from = "/mobile_camera"
+  to = "/mobile_camera.html"
+  status = 200
 
 [[redirects]]
   from = "/*"
-  to = "/.netlify/functions/app"
+  to = "/index.html"
   status = 200
