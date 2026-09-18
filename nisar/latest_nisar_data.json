@@ -1,10 +1,10 @@
 {
-  "timestamp": 1789768081.537699,
-  "formatted_time": "2026-09-19 03:18:01",
+  "timestamp": 1789771985.9266002,
+  "formatted_time": "2026-09-19 04:23:05",
   "nisar_pixels": {
-    "red": 0.4219,
-    "green": 0.5206,
-    "blue": 0.494,
+    "red": 0.5063,
+    "green": 0.4666,
+    "blue": 0.4419,
     "nir": 0.15,
     "swir": 0.35,
     "thermal": 52.0,
@@ -13,7 +13,7 @@
   },
   "predicted_disaster": "None",
   "risk_level": "LOW",
-  "confidence_percent": 86.25,
+  "confidence_percent": 85.37,
   "location": {
     "lat": 30.0668,
     "lon": 79.0193,
