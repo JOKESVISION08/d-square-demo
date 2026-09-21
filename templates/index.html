@@ -499,36 +499,6 @@
           <div class="sensor-sub" id="sub-flame">IR Flame • Pin D2</div>
         </div>
       </div>
-
-      <!-- 8. Gyro X -->
-      <div class="col-xl-2 col-lg-3 col-md-4 col-6">
-        <div class="sensor-card">
-          <div class="sensor-icon text-success"><i class="fa-solid fa-compass"></i></div>
-          <div class="sensor-label">Gyro X Axis</div>
-          <div class="sensor-value" id="val-gyrox">— °/s</div>
-          <div class="sensor-sub">MPU6050 I2C</div>
-        </div>
-      </div>
-
-      <!-- 9. Gyro Y -->
-      <div class="col-xl-2 col-lg-3 col-md-4 col-6">
-        <div class="sensor-card">
-          <div class="sensor-icon text-success"><i class="fa-solid fa-compass"></i></div>
-          <div class="sensor-label">Gyro Y Axis</div>
-          <div class="sensor-value" id="val-gyroy">— °/s</div>
-          <div class="sensor-sub">MPU6050 I2C</div>
-        </div>
-      </div>
-
-      <!-- 10. Gyro Z -->
-      <div class="col-xl-2 col-lg-3 col-md-4 col-6">
-        <div class="sensor-card">
-          <div class="sensor-icon text-success"><i class="fa-solid fa-compass"></i></div>
-          <div class="sensor-label">Gyro Z Axis</div>
-          <div class="sensor-value" id="val-gyroz">— °/s</div>
-          <div class="sensor-sub">MPU6050 I2C</div>
-        </div>
-      </div>
     </div>
 
     <!-- NEW SECTION: MULTI-MODAL FUSION & SATELLITE UPLOAD AI PREDICTOR -->
@@ -1203,18 +1173,6 @@
       flameEl.innerText = flame === 1 ? "FLAME DETECTED" : "SAFE";
       flameEl.className = `sensor-value ${flame === 1 ? 'val-danger' : 'val-good'}`;
 
-      const gyroXEl = document.getElementById("val-gyrox");
-      gyroXEl.innerText = `${gyroX.toFixed(1)} °/s`;
-      gyroXEl.className = `sensor-value ${Math.abs(gyroX) > 5 ? 'val-danger' : 'val-good'}`;
-
-      const gyroYEl = document.getElementById("val-gyroy");
-      gyroYEl.innerText = `${gyroY.toFixed(1)} °/s`;
-      gyroYEl.className = `sensor-value ${Math.abs(gyroY) > 5 ? 'val-danger' : 'val-good'}`;
-
-      const gyroZEl = document.getElementById("val-gyroz");
-      gyroZEl.innerText = `${gyroZ.toFixed(1)} °/s`;
-      gyroZEl.className = `sensor-value ${Math.abs(gyroZ) > 5 ? 'val-danger' : 'val-good'}`;
-
       document.getElementById("node-id-display").innerText = `Node: ${nodeId}`;
 
       // Dynamic Alert Banner Logic
@@ -1246,7 +1204,7 @@
         banner.className = "alert-banner alert-banner-normal mb-4";
         bannerIcon.className = "fa-solid fa-shield-halved fa-xl text-success";
         bannerTitle.innerText = "✅ ALL SYSTEMS OPERATIONAL – NORMAL TELEMETRY";
-        bannerDesc.innerText = `All 10 ground station sensors on ${nodeId} are operating within normal parameters.`;
+        bannerDesc.innerText = `All ground station sensors on ${nodeId} are operating within normal parameters.`;
       }
 
       // Summary Footer Panel
@@ -1274,9 +1232,6 @@
       document.getElementById("val-tilt").innerText = "OFFLINE";
       document.getElementById("val-vibr").innerText = "OFFLINE";
       document.getElementById("val-flame").innerText = "OFFLINE";
-      document.getElementById("val-gyrox").innerText = "— °/s";
-      document.getElementById("val-gyroy").innerText = "— °/s";
-      document.getElementById("val-gyroz").innerText = "— °/s";
 
       document.getElementById("summary-scenario").innerText = "OFFLINE";
       document.getElementById("summary-disaster-badge").innerText = "UNKNOWN";
