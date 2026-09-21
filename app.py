@@ -54,6 +54,7 @@ from services.safety_assistant import safety_assistant
 from services.rescue_voice_assistant import rescue_voice_assistant
 from services.rescue_gpt_service import rescue_gpt_service
 from services.safe_zone_service import SafeZoneService
+from services.fusion_engine_service import fusion_engine_service
 
 safe_zone_service = SafeZoneService()
 
@@ -450,6 +451,90 @@ def get_cloud_removed_image():
         "cloud_free_image_b64": f"data:image/png;base64,{b64_str}",
         "cloud_coverage_percentage": 0.0,
         "processing_algorithm": "U-Net Multi-Spectral Synthesis"
+    })
+
+@app.route("/api/satellite/historical", methods=["GET"])
+def get_satellite_historical():
+    lat = float(request.args.get("lat", 30.0668))
+    lon = float(request.args.get("lon", 79.0193))
+    years = int(request.args.get("years", 5))
+    data = fusion_engine_service.sat_fetcher.fetch_historical_series(lat, lon, years=years)
+    return jsonify({"status": "success", "images": data["time_series"], "baseline": data})
+
+@app.route("/api/satellite/current", methods=["GET"])
+def get_satellite_current():
+    lat = float(request.args.get("lat", 30.0668))
+    lon = float(request.args.get("lon", 79.0193))
+    data = fusion_engine_service.sat_fetcher.fetch_current_satellite(lat, lon)
+    return jsonify({"status": "success", "satellite_data": data})
+
+@app.route("/api/satellite/compare", methods=["GET"])
+def get_satellite_compare():
+    lat = float(request.args.get("lat", 30.0668))
+    lon = float(request.args.get("lon", 79.0193))
+    res = fusion_engine_service.analyze_fusion(lat, lon, iot_data=latest_sensor_data)
+    sat_analysis = res.get("satellite_analysis", {})
+    return jsonify({
+        "status": "success",
+        "ndvi_anomaly": sat_analysis.get("ndvi_anomaly_pct", -10.8),
+        "change_percentage": sat_analysis.get("ndvi_anomaly_pct", -10.8),
+        "risk_indicator": "vegetation_stress" if sat_analysis.get("ndvi_anomaly_pct", 0) < -5 else "normal",
+        "satellite_analysis": sat_analysis
+    })
+
+@app.route("/api/satellite/cloud_free", methods=["GET"])
+def get_satellite_cloud_free():
+    return get_cloud_removed_image()
+
+# ----------------- Multi-Modal Fusion Engine Endpoints -----------------
+@app.route("/api/fusion/analyze", methods=["POST"])
+def post_fusion_analyze():
+    body = request.get_json(silent=True) or {}
+    lat = float(body.get("lat", 30.0668))
+    lon = float(body.get("lon", 79.0193))
+    iot_data = body.get("iot_data", latest_sensor_data)
+    
+    res = fusion_engine_service.analyze_fusion(lat=lat, lon=lon, iot_data=iot_data)
+    return jsonify(res)
+
+@app.route("/api/fusion/risk_map", methods=["GET"])
+def get_fusion_risk_map():
+    region = request.args.get("region", "Uttarakhand")
+    lat = float(request.args.get("lat", 30.0668))
+    lon = float(request.args.get("lon", 79.0193))
+    grid = fusion_engine_service.generate_risk_map(region=region, center_lat=lat, center_lon=lon)
+    return jsonify(grid)
+
+# ----------------- Prediction Endpoints -----------------
+@app.route("/api/prediction/next_24h", methods=["GET"])
+def get_prediction_next_24h():
+    lat = float(request.args.get("lat", 30.0668))
+    lon = float(request.args.get("lon", 79.0193))
+    res = fusion_engine_service.analyze_fusion(lat=lat, lon=lon, iot_data=latest_sensor_data)
+    
+    return jsonify({
+        "status": "success",
+        "latitude": lat,
+        "longitude": lon,
+        "landslide_risk": round(res["risk_score"] / 100.0, 2),
+        "flood_risk": 0.45 if res["satellite_analysis"]["gpm_rainfall_24h_mm"] > 40 else 0.15,
+        "fire_risk": 0.95 if latest_sensor_data.get("flame", 0) == 1 else 0.08,
+        "prediction_lead_time": "24-48 hours",
+        "primary_hazard": res["disaster_type"]
+    })
+
+@app.route("/api/prediction/monsoon_outlook", methods=["GET"])
+def get_prediction_monsoon_outlook():
+    region = request.args.get("region", "Uttarakhand")
+    res = monsoon_engine.predict_region_risk(region=region, current_rainfall=45.2, soil_moisture=latest_sensor_data.get("soil_moisture", 42.0))
+    return jsonify({
+        "status": "success",
+        "region": region,
+        "current_rainfall_mm": res["current_rainfall_mm"],
+        "historical_avg_mm": res["historical_rainfall_mm"],
+        "anomaly": f"+{res['anomaly_percentage']}%",
+        "outlook": "Above normal" if res["anomaly_percentage"] > 10 else "Normal",
+        "prediction": res["prediction"]
     })
 
 # ----------------- D-SQUARE GPT Chatbot -----------------

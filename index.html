@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>D-SQUARE 2.0 - Quadruple AI Disaster Surveillance Dashboard</title>
+  <title>D-SQUARE 2.0 - Quadruple AI Disaster Surveillance & Multi-Modal Fusion Dashboard</title>
   
   <!-- Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -190,7 +190,7 @@
     .val-warn { color: #fbbf24 !important; }
     .val-danger { color: #fca5a5 !important; }
 
-    /* Map & Panel Containers */
+    /* Panel Containers */
     .panel-card {
       background: var(--card-bg);
       border: 1px solid var(--card-border);
@@ -200,7 +200,7 @@
     }
 
     #main-map {
-      height: 340px;
+      height: 360px;
       border-radius: 10px;
       z-index: 1;
     }
@@ -242,6 +242,32 @@
       font-weight: 600;
       text-transform: uppercase;
     }
+
+    /* Multi-Modal Fusion styling */
+    .fusion-gauge-box {
+      background: rgba(15, 23, 42, 0.7);
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      padding: 16px;
+      text-align: center;
+    }
+
+    .factor-pill {
+      background: rgba(30, 58, 95, 0.5);
+      border: 1px solid rgba(56, 189, 248, 0.2);
+      border-radius: 8px;
+      padding: 8px 12px;
+      font-size: 0.8rem;
+      margin-bottom: 8px;
+    }
+
+    .satellite-preview-box {
+      background: #0d182e;
+      border: 1px solid var(--card-border);
+      border-radius: 10px;
+      padding: 12px;
+      min-height: 140px;
+    }
   </style>
 </head>
 <body>
@@ -253,7 +279,7 @@
         <span class="brand-title">
           <i class="fa-solid fa-satellite-dish text-info me-2"></i>D-SQUARE 2.0
         </span>
-        <span class="text-muted d-none d-md-inline">| Multi-Disaster AI Surveillance</span>
+        <span class="text-muted d-none d-md-inline">| Multi-Modal AI Fusion Surveillance</span>
       </div>
 
       <div class="d-flex align-items-center gap-3">
@@ -291,7 +317,7 @@
         <i id="alert-icon" class="fa-solid fa-shield-halved fa-xl"></i>
         <div>
           <div id="alert-banner-title" class="fs-6 fw-bold">SYSTEM STATUS NORMAL</div>
-          <div id="alert-banner-desc" class="small opacity-75">All 10 ground station sensors are operating within safe parameters.</div>
+          <div id="alert-banner-desc" class="small opacity-75">All 10 ground station sensors and satellite metrics operating within safe parameters.</div>
         </div>
       </div>
       <div class="text-end small opacity-75 d-none d-sm-block">
@@ -407,16 +433,150 @@
       </div>
     </div>
 
-    <!-- Main Content Row: Map & Telemetry Trend -->
+    <!-- NEW SECTION: MULTI-MODAL FUSION & SATELLITE ANALYSIS PANEL -->
+    <h6 class="text-uppercase text-muted fw-bold mb-3 small tracking-wider">
+      <i class="fa-solid fa-brain text-warning me-2"></i>Multi-Modal AI Fusion Engine &amp; Satellite Analytics
+    </h6>
+
+    <div class="row g-3 mb-4">
+      <!-- 1. AI Disaster Risk Gauge & Decision-Level Ensemble -->
+      <div class="col-lg-4">
+        <div class="panel-card d-flex flex-column justify-content-between">
+          <div>
+            <div class="d-flex align-items-center justify-content-between mb-3">
+              <h6 class="fw-bold mb-0 text-warning">
+                <i class="fa-solid fa-crystal-ball me-2"></i>24-48h AI Predictive Risk
+              </h6>
+              <span class="badge bg-danger text-white px-2 py-1" id="fusion-confidence-badge">85% Confidence</span>
+            </div>
+
+            <div class="fusion-gauge-box mb-3">
+              <div class="text-muted small mb-1">FUSED DISASTER RISK SCORE</div>
+              <div class="display-5 fw-bold text-danger" id="fusion-risk-score">78.5%</div>
+              <div class="fw-bold text-uppercase tracking-wider mt-1 text-warning" id="fusion-disaster-title">HIGH LANDSLIDE RISK</div>
+              <div class="small text-muted mt-2">
+                <i class="fa-solid fa-clock me-1"></i>Predictive Lead Window: <strong class="text-info">24–48 Hours</strong>
+              </div>
+            </div>
+
+            <div class="small mb-2 fw-semibold text-muted">Decision-Level Ensemble Weights:</div>
+            <div class="progress mb-1" style="height: 8px;">
+              <div class="progress-bar bg-info" style="width: 40%" title="Satellite Model (40%)"></div>
+              <div class="progress-bar bg-warning" style="width: 40%" title="Ground IoT Model (40%)"></div>
+              <div class="progress-bar bg-secondary" style="width: 20%" title="Historical Susceptibility (20%)"></div>
+            </div>
+            <div class="d-flex justify-content-between text-muted" style="font-size: 0.68rem;">
+              <span>🛰️ Satellite (40%)</span>
+              <span>📟 IoT (40%)</span>
+              <span>🗺️ Susceptibility (20%)</span>
+            </div>
+          </div>
+
+          <div class="mt-3 p-2 rounded bg-dark border border-secondary small text-light" id="fusion-recommendation">
+            <i class="fa-solid fa-triangle-exclamation text-warning me-1"></i>
+            <span>🚨 HIGH RISK WARNING: Initiate immediate slope monitoring and pre-position rescue teams.</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 2. Key Contributing Risk Factors Breakdown -->
+      <div class="col-lg-4">
+        <div class="panel-card d-flex flex-column justify-content-between">
+          <div>
+            <h6 class="fw-bold mb-3 text-info">
+              <i class="fa-solid fa-list-check me-2"></i>Multi-Modal Risk Drivers
+            </h6>
+            <div id="risk-factors-list">
+              <div class="factor-pill d-flex align-items-center justify-content-between">
+                <span><i class="fa-solid fa-droplet text-warning me-2"></i>Soil Moisture Saturated</span>
+                <strong class="text-danger">88.0%</strong>
+              </div>
+              <div class="factor-pill d-flex align-items-center justify-content-between">
+                <span><i class="fa-solid fa-tree text-danger me-2"></i>Vegetation Loss Anomaly</span>
+                <strong class="text-danger">-10.8% NDVI</strong>
+              </div>
+              <div class="factor-pill d-flex align-items-center justify-content-between">
+                <span><i class="fa-solid fa-cloud-showers-heavy text-info me-2"></i>Heavy 24h Rainfall (GPM)</span>
+                <strong class="text-info">48.5 mm</strong>
+              </div>
+              <div class="factor-pill d-flex align-items-center justify-content-between">
+                <span><i class="fa-solid fa-mountain text-warning me-2"></i>Slope Incline Movement</span>
+                <strong class="text-warning">38° Tilt Active</strong>
+              </div>
+            </div>
+          </div>
+
+          <div class="p-2 rounded bg-dark border border-secondary small text-muted">
+            <div class="d-flex justify-content-between">
+              <span>SAR Soil Index: <strong class="text-white">0.88</strong></span>
+              <span>Slope DEM: <strong class="text-white">38°</strong></span>
+              <span>GPM 24h: <strong class="text-white">48.5mm</strong></span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 3. Satellite Image Comparison & Change Detection Panel -->
+      <div class="col-lg-4">
+        <div class="panel-card d-flex flex-column justify-content-between">
+          <div>
+            <div class="d-flex align-items-center justify-content-between mb-2">
+              <h6 class="fw-bold mb-0 text-success">
+                <i class="fa-solid fa-earth-americas me-2"></i>Satellite Change Detection
+              </h6>
+              <span class="badge bg-success text-dark fw-bold">SAR Radar Active</span>
+            </div>
+
+            <div class="satellite-preview-box mb-3 d-flex flex-column justify-content-between">
+              <div class="d-flex justify-content-between small text-muted">
+                <span>Current vs 5-Yr Baseline</span>
+                <span class="text-warning fw-bold" id="ndvi-anomaly-text">-10.8% NDVI Anomaly</span>
+              </div>
+              
+              <div class="my-2">
+                <div class="small text-muted mb-1">Land Cover Composition:</div>
+                <div class="progress" style="height: 10px;">
+                  <div class="progress-bar bg-success" style="width: 58%" title="Forest (58%)"></div>
+                  <div class="progress-bar bg-warning" style="width: 18%" title="Barren Slope (18%)"></div>
+                  <div class="progress-bar bg-info" style="width: 14%" title="Agriculture (14%)"></div>
+                  <div class="progress-bar bg-secondary" style="width: 10%" title="Urban/Water (10%)"></div>
+                </div>
+                <div class="d-flex justify-content-between text-muted mt-1" style="font-size: 0.65rem;">
+                  <span>🌲 Forest 58%</span>
+                  <span>🏜️ Barren 18%</span>
+                  <span>🌾 Agri 14%</span>
+                </div>
+              </div>
+
+              <div class="small text-muted">
+                <i class="fa-solid fa-cloud-slash text-info me-1"></i>Cloud Removal AI: <strong class="text-light">U-Net Multi-Spectral Synthesis</strong>
+              </div>
+            </div>
+          </div>
+
+          <div class="d-flex justify-content-between text-muted small">
+            <span>Satellites: Sentinel-1 SAR / Landsat-9</span>
+            <span>Revisit: <strong class="text-white">5-Day</strong></span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main Content Row: Leaflet Map with GeoJSON Risk Layer & Telemetry Trend -->
     <div class="row g-3">
       <!-- Leaflet Map Container -->
       <div class="col-lg-7">
         <div class="panel-card">
           <div class="d-flex align-items-center justify-content-between mb-3">
             <h6 class="fw-bold mb-0 text-info">
-              <i class="fa-solid fa-map-location-dot me-2"></i>Live Node Location & Emergency Safe Shelters
+              <i class="fa-solid fa-map-location-dot me-2"></i>Live Ground Node &amp; Spatial Risk GeoJSON Grid
             </h6>
-            <span class="badge bg-dark border border-secondary text-light">Sector: Uttarakhand</span>
+            <div class="d-flex gap-2">
+              <button class="btn btn-outline-info btn-sm py-0 px-2" onclick="toggleRiskGrid()">
+                <i class="fa-solid fa-layer-group me-1"></i> Toggle Risk Grid
+              </button>
+              <span class="badge bg-dark border border-secondary text-light">Sector: Uttarakhand</span>
+            </div>
           </div>
           <div id="main-map"></div>
         </div>
@@ -514,6 +674,8 @@
 
     let map = null;
     let nodeMarker = null;
+    let riskGridLayer = null;
+    let showRiskGrid = true;
     let trendChart = null;
     let lastSuccessfulFetchTime = Date.now();
     let currentSensorData = null;
@@ -532,6 +694,10 @@
       fetchTelemetryData();
       setInterval(fetchTelemetryData, 2000);
 
+      // Fetch Multi-Modal Fusion and GeoJSON Risk Grid
+      fetchFusionAnalysis();
+      fetchRiskGridMap();
+
       // Live 1s freshness counter update
       setInterval(updateFreshnessTimer, 1000);
     });
@@ -548,11 +714,11 @@
       setInterval(update, 1000);
     }
 
-    // 2. Leaflet Map Initialization
+    // 2. Leaflet Map Initialization & GeoJSON Grid
     function initLeafletMap() {
       map = L.map("main-map").setView([30.0668, 79.0193], 12);
       
-      // Dark map tile layer with OpenStreetMap fallback
+      // Dark map tile layer
       L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
         maxZoom: 18,
         attribution: '&copy; OpenStreetMap contributors | D-SQUARE 2.0'
@@ -568,6 +734,54 @@
 
       const shelter2 = L.circle([30.0500, 79.0050], { color: '#10b981', fillColor: '#10b981', fillOpacity: 0.25, radius: 600 }).addTo(map);
       shelter2.bindPopup("<b>Safe Shelter Center B</b><br>Gopeshwar Disaster Relief HQ");
+    }
+
+    async function fetchRiskGridMap() {
+      try {
+        let gridData = null;
+        try {
+          gridData = await fetchWithTimeout(`${PRIMARY_BACKEND}/api/fusion/risk_map?region=Uttarakhand`, {}, 4000);
+        } catch (e1) {
+          gridData = await fetchWithTimeout(`${CLOUD_TUNNEL_FALLBACK}/api/fusion/risk_map?region=Uttarakhand`, {}, 4000);
+        }
+
+        if (gridData && gridData.features) {
+          if (riskGridLayer) map.removeLayer(riskGridLayer);
+
+          riskGridLayer = L.geoJSON(gridData, {
+            style: function(feature) {
+              return {
+                color: feature.properties.fill_color,
+                weight: 1.5,
+                fillColor: feature.properties.fill_color,
+                fillOpacity: 0.35
+              };
+            },
+            onEachFeature: function(feature, layer) {
+              const p = feature.properties;
+              layer.bindPopup(`
+                <div style="font-family: sans-serif;">
+                  <strong class="text-primary">${p.cell_id}</strong><br>
+                  Risk Score: <strong style="color:${p.fill_color}">${p.risk_score}% (${p.risk_level})</strong><br>
+                  Primary Hazard: <b>${p.primary_hazard}</b><br>
+                  NDVI Anomaly: ${p.ndvi_anomaly}<br>
+                  Soil Moisture: ${p.soil_moisture}
+                </div>
+              `);
+            }
+          });
+
+          if (showRiskGrid) riskGridLayer.addTo(map);
+        }
+      } catch (err) {}
+    }
+
+    function toggleRiskGrid() {
+      showRiskGrid = !showRiskGrid;
+      if (riskGridLayer) {
+        if (showRiskGrid) map.addLayer(riskGridLayer);
+        else map.removeLayer(riskGridLayer);
+      }
     }
 
     // 3. Chart.js Initialization
@@ -637,7 +851,6 @@
         data = await fetchWithTimeout(primaryEndpoint, {}, FETCH_TIMEOUT_MS);
         isLive = true;
       } catch (err1) {
-        // Primary failed, try fallback cloud tunnel URL if primary wasn't already using it
         if (PRIMARY_BACKEND !== CLOUD_TUNNEL_FALLBACK) {
           try {
             data = await fetchWithTimeout(`${CLOUD_TUNNEL_FALLBACK}/api/latest_sensor_data`, {}, FETCH_TIMEOUT_MS);
@@ -652,7 +865,6 @@
         lastSuccessfulFetchTime = Date.now();
         currentSensorData = data;
 
-        // Cache successful response
         try {
           localStorage.setItem(CACHE_KEY, JSON.stringify({
             data: data,
@@ -663,7 +875,6 @@
         updateConnectionPill("online", "ONLINE");
         renderTelemetryUI(data, false);
       } else {
-        // Attempt to load from cache
         const cached = loadCachedData();
         if (cached && cached.data) {
           currentSensorData = cached.data;
@@ -673,6 +884,56 @@
           updateConnectionPill("offline", "OFFLINE");
           renderOfflineUI();
         }
+      }
+    }
+
+    async function fetchFusionAnalysis() {
+      try {
+        let fusionRes = null;
+        const payload = { lat: 30.0668, lon: 79.0193, iot_data: currentSensorData || {} };
+        
+        try {
+          fusionRes = await fetchWithTimeout(`${PRIMARY_BACKEND}/api/fusion/analyze`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload)
+          }, 4000);
+        } catch (e1) {
+          fusionRes = await fetchWithTimeout(`${CLOUD_TUNNEL_FALLBACK}/api/fusion/analyze`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload)
+          }, 4000);
+        }
+
+        if (fusionRes && fusionRes.status === "success") {
+          renderFusionUI(fusionRes);
+        }
+      } catch (err) {}
+    }
+
+    function renderFusionUI(res) {
+      document.getElementById("fusion-risk-score").innerText = `${res.risk_score.toFixed(1)}%`;
+      document.getElementById("fusion-disaster-title").innerText = `${res.risk_level} ${res.disaster_type.toUpperCase()} RISK`;
+      document.getElementById("fusion-confidence-badge").innerText = `${Math.round(res.confidence * 100)}% Confidence`;
+
+      const recEl = document.getElementById("fusion-recommendation");
+      recEl.innerHTML = `<i class="fa-solid fa-triangle-exclamation text-warning me-1"></i> ${res.recommendation}`;
+
+      const sat = res.satellite_analysis || {};
+      if (sat.ndvi_anomaly_pct) {
+        document.getElementById("ndvi-anomaly-text").innerText = `${sat.ndvi_anomaly_pct.toFixed(1)}% NDVI Anomaly`;
+      }
+
+      // Render Factors
+      const factorsList = document.getElementById("risk-factors-list");
+      if (res.factors && res.factors.length > 0) {
+        factorsList.innerHTML = res.factors.map(f => `
+          <div class="factor-pill d-flex align-items-center justify-content-between">
+            <span><i class="fa-solid fa-triangle-exclamation text-warning me-2"></i>${f}</span>
+            <strong class="text-danger">ACTIVE</strong>
+          </div>
+        `).join("");
       }
     }
 
@@ -694,7 +955,6 @@
 
     // 6. UI Renderer for Sensor Data
     function renderTelemetryUI(data, isCached = false, cacheTimestamp = null) {
-      // 10 Sensor values extraction with safe fallbacks
       const temp = typeof data.temperature === 'number' ? data.temperature : 25.0;
       const hum = typeof data.humidity === 'number' ? data.humidity : 50.0;
       const soilMoisture = typeof data.soil_moisture === 'number' ? data.soil_moisture : 42.0;
@@ -711,43 +971,35 @@
       const nodeId = data.node_id || "D-SQUARE_NODE_01";
 
       // Render Values with Threshold Styling
-      // 1. Temperature
       const tempEl = document.getElementById("val-temp");
       tempEl.innerText = `${temp.toFixed(1)} °C`;
       tempEl.className = `sensor-value ${temp > 40 ? 'val-danger' : (temp > 35 ? 'val-warn' : 'val-good')}`;
 
-      // 2. Humidity
       const humEl = document.getElementById("val-hum");
       humEl.innerText = `${hum.toFixed(1)} %`;
       humEl.className = `sensor-value ${hum > 85 ? 'val-danger' : (hum > 70 ? 'val-warn' : 'val-good')}`;
 
-      // 3. Soil Moisture
       const soilEl = document.getElementById("val-soil");
       soilEl.innerText = `${soilMoisture.toFixed(1)} %`;
       soilEl.className = `sensor-value ${(soilMoisture >= 80 || soilRaw < 600) ? 'val-danger' : (soilMoisture >= 60 || soilRaw < 800 ? 'val-warn' : 'val-good')}`;
       document.getElementById("val-soil-raw").innerText = soilRaw.toFixed(0);
 
-      // 4. MQ2 Gas
       const gasEl = document.getElementById("val-gas");
       gasEl.innerText = mq2 === 1 ? "GAS DETECTED" : "NORMAL";
       gasEl.className = `sensor-value ${mq2 === 1 ? 'val-danger' : 'val-good'}`;
 
-      // 5. Tilt Sensor
       const tiltEl = document.getElementById("val-tilt");
       tiltEl.innerText = tilt === 1 ? "TILTED" : "LEVEL";
       tiltEl.className = `sensor-value ${tilt === 1 ? 'val-danger' : 'val-good'}`;
 
-      // 6. Vibration Sensor
       const vibrEl = document.getElementById("val-vibr");
       vibrEl.innerText = vibration === 1 ? "DETECTED" : "STABLE";
       vibrEl.className = `sensor-value ${vibration === 1 ? 'val-danger' : 'val-good'}`;
 
-      // 7. Flame Sensor
       const flameEl = document.getElementById("val-flame");
       flameEl.innerText = flame === 1 ? "FLAME DETECTED" : "SAFE";
       flameEl.className = `sensor-value ${flame === 1 ? 'val-danger' : 'val-good'}`;
 
-      // 8, 9, 10. Gyro X, Y, Z
       const gyroXEl = document.getElementById("val-gyrox");
       gyroXEl.innerText = `${gyroX.toFixed(1)} °/s`;
       gyroXEl.className = `sensor-value ${Math.abs(gyroX) > 5 ? 'val-danger' : 'val-good'}`;
@@ -760,7 +1012,6 @@
       gyroZEl.innerText = `${gyroZ.toFixed(1)} °/s`;
       gyroZEl.className = `sensor-value ${Math.abs(gyroZ) > 5 ? 'val-danger' : 'val-good'}`;
 
-      // Node ID display
       document.getElementById("node-id-display").innerText = `Node: ${nodeId}`;
 
       // Dynamic Alert Banner Logic
@@ -781,7 +1032,7 @@
       } else if (isCritical) {
         banner.className = "alert-banner alert-banner-critical mb-4";
         bannerIcon.className = "fa-solid fa-circle-radiation fa-xl text-danger";
-        bannerTitle.innerText = `🚨 CRITICAL ALERT: ${disasterType} RISK DETECTED BY GROUND SENSORS!`;
+        bannerTitle.innerText = `🚨 CRITICAL ALERT: ${disasterType} RISK DETECTED BY HARDWARE SENSORS!`;
         bannerDesc.innerText = `Immediate automated warning triggered on node ${nodeId}. High moisture/flame/displacement telemetry logged.`;
       } else if (isWarning) {
         banner.className = "alert-banner alert-banner-warning mb-4";
@@ -859,7 +1110,7 @@
         chartTempData.shift();
       }
 
-      trendChart.update('none'); // Update without resetting animation
+      trendChart.update('none');
     }
 
     // 9. Node Selector Event
@@ -869,6 +1120,7 @@
         nodeMarker.setPopupContent(`<b>D-SQUARE ${selected}</b><br>Ground Station Telemetry Active`);
       }
       fetchTelemetryData();
+      fetchFusionAnalysis();
     }
 
     // 10. SOS Modal & Execution
