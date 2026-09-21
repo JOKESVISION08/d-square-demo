@@ -156,6 +156,11 @@ def mobile_camera_route():
 def ml_fusion_center_route():
     return render_template("ml_fusion_center.html")
 
+@app.route("/dsquare_gpt")
+@app.route("/dsquare_gpt.html")
+def dsquare_gpt_route():
+    return render_template("dsquare_gpt.html")
+
 # ----------------- JWT Auth API -----------------
 @app.route("/api/auth/register", methods=["POST"])
 def auth_register():
