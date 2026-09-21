@@ -59,6 +59,45 @@ class SatelliteDataFetcher:
     Fetches / synthesizes multi-temporal satellite imagery metadata & spectral time-series.
     Connects with Sentinel-1 SAR, Sentinel-2, Landsat-8/9, MODIS, and Bhuvan API.
     """
+    def __init__(self):
+        self.current_nisar_pixels = {
+            "satellite": "NASA-ISRO SAR (NISAR)",
+            "mode": "L-band & S-band Dual-Frequency SAR Radar",
+            "source": "MOBILE_NISAR_SATELLITE_NODE",
+            "latitude": 30.0668,
+            "longitude": 79.0193,
+            "sar_l_band_db": -12.4,
+            "sar_s_band_db": -8.2,
+            "ground_deformation_mm_yr": -14.2,
+            "sar_coherence": 0.88,
+            "soil_moisture_index": 0.85,
+            "deformation_status": "SLOPE DISPLACEMENT WARNING",
+            "alert_level": "WARNING",
+            "timestamp": datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ")
+        }
+
+    def update_nisar_pixels(self, payload: Dict[str, Any]) -> Dict[str, Any]:
+        """Updates NISAR radar pixels broadcasted from mobile satellite node"""
+        if "sar_l_band_db" in payload:
+            self.current_nisar_pixels["sar_l_band_db"] = float(payload["sar_l_band_db"])
+        if "sar_s_band_db" in payload:
+            self.current_nisar_pixels["sar_s_band_db"] = float(payload["sar_s_band_db"])
+        if "ground_deformation_mm_yr" in payload:
+            self.current_nisar_pixels["ground_deformation_mm_yr"] = float(payload["ground_deformation_mm_yr"])
+        if "sar_coherence" in payload:
+            self.current_nisar_pixels["sar_coherence"] = float(payload["sar_coherence"])
+        if "latitude" in payload:
+            self.current_nisar_pixels["latitude"] = float(payload["latitude"])
+        if "longitude" in payload:
+            self.current_nisar_pixels["longitude"] = float(payload["longitude"])
+
+        def_val = self.current_nisar_pixels["ground_deformation_mm_yr"]
+        self.current_nisar_pixels["deformation_status"] = "SLOPE DISPLACEMENT WARNING" if def_val < -10.0 else "STABLE GROUND SURFACE"
+        self.current_nisar_pixels["alert_level"] = "WARNING" if def_val < -10.0 else "NORMAL"
+        self.current_nisar_pixels["source"] = payload.get("source", "MOBILE_NISAR_SATELLITE_NODE")
+        self.current_nisar_pixels["timestamp"] = datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ")
+
+        return self.current_nisar_pixels
 
     def fetch_historical_series(self, lat: float, lon: float, years: int = 5) -> Dict[str, Any]:
         """Fetches 5-10 year historical baseline satellite spectral metrics for current month"""
@@ -132,29 +171,9 @@ class SatelliteDataFetcher:
 
     def get_nisar_radar_pixels(self, lat: float, lon: float) -> Dict[str, Any]:
         """Returns NISAR L-band & S-band SAR radar backscatter & ground deformation rate"""
-        seed = (int(lat * 1000) + int(lon * 1000)) % 50
-        l_band_db = round(-12.4 - (seed % 5) * 0.4, 2)
-        s_band_db = round(-8.2 - (seed % 4) * 0.3, 2)
-        deformation_mm_yr = round(-14.2 - (seed % 6) * 1.5, 1)
-        coherence = round(0.88 - (seed % 4) * 0.02, 2)
-        soil_moisture_index = round(0.85 + (seed % 3) * 0.04, 2)
-
-        status = "SLOPE DISPLACEMENT WARNING" if deformation_mm_yr < -10.0 else "STABLE GROUND SURFACE"
-
-        return {
-            "satellite": "NASA-ISRO SAR (NISAR)",
-            "mode": "L-band & S-band Dual-Frequency SAR Radar",
-            "latitude": lat,
-            "longitude": lon,
-            "sar_l_band_db": l_band_db,
-            "sar_s_band_db": s_band_db,
-            "ground_deformation_mm_yr": deformation_mm_yr,
-            "sar_coherence": coherence,
-            "soil_moisture_index": soil_moisture_index,
-            "deformation_status": status,
-            "alert_level": "WARNING" if deformation_mm_yr < -10.0 else "NORMAL",
-            "timestamp": datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ")
-        }
+        self.current_nisar_pixels["latitude"] = lat
+        self.current_nisar_pixels["longitude"] = lon
+        return self.current_nisar_pixels
 
 
 class MultiModalFusionEngineService:

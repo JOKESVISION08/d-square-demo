@@ -512,6 +512,17 @@ def get_satellite_nisar_pixels():
     data = fusion_engine_service.sat_fetcher.get_nisar_radar_pixels(lat, lon)
     return jsonify({"status": "success", "nisar_pixels": data})
 
+@app.route("/api/mobile/nisar_broadcast", methods=["POST"])
+@app.route("/api/satellite/nisar_pixels", methods=["POST"])
+def post_mobile_nisar_broadcast():
+    body = request.get_json(silent=True) or request.form.to_dict() or {}
+    updated = fusion_engine_service.sat_fetcher.update_nisar_pixels(body)
+    return jsonify({
+        "status": "success",
+        "message": "📡 Mobile NISAR Satellite Radar Pixels broadcasted live to PC Dashboard!",
+        "nisar_pixels": updated
+    })
+
 @app.route("/api/fusion/upload_compare", methods=["POST"])
 def post_fusion_upload_compare():
     body = request.get_json(silent=True) or {}

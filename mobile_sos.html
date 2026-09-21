@@ -246,6 +246,36 @@
       </div>
     </div>
 
+    <!-- MOBILE NISAR SATELLITE RADAR PIXEL BROADCASTER CARD -->
+    <div class="card-sos mb-3" style="border: 1px solid #38bdf8;">
+      <div class="d-flex align-items-center justify-content-between mb-2">
+        <div class="d-flex align-items-center gap-2">
+          <i class="fa-solid fa-satellite text-info fa-lg"></i>
+          <h6 class="mb-0 text-white fw-bold">Mobile NISAR Satellite Radar Telemetry</h6>
+        </div>
+        <span class="badge bg-info text-dark fw-bold" style="font-size: 0.7rem;">MOBILE SATELLITE</span>
+      </div>
+      
+      <div class="row g-2 mb-2 text-center small">
+        <div class="col-6">
+          <div class="p-2 bg-dark rounded border border-secondary">
+            <span class="text-muted d-block" style="font-size: 0.68rem;">Deformation Velocity</span>
+            <strong class="text-danger fs-6" id="mob-nisar-def">-14.2 mm/yr</strong>
+          </div>
+        </div>
+        <div class="col-6">
+          <div class="p-2 bg-dark rounded border border-secondary">
+            <span class="text-muted d-block" style="font-size: 0.68rem;">SAR L-Band Backscatter</span>
+            <strong class="text-info fs-6" id="mob-nisar-lband">-12.4 dB</strong>
+          </div>
+        </div>
+      </div>
+
+      <button class="btn btn-info btn-sm w-100 fw-bold py-2" onclick="broadcastNisarPixelsToPC()">
+        <i class="fa-solid fa-satellite-dish me-1"></i> BROADCAST NISAR PIXELS TO PC DASHBOARD
+      </button>
+    </div>
+
     <!-- 4. Live Safety Map Card -->
     <div class="card-sos p-2 mb-3" id="mobile-map-card">
       <div class="d-flex justify-content-between align-items-center mb-2 px-1">
