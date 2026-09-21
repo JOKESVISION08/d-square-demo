@@ -191,7 +191,7 @@ class DisasterDatasetGenerator:
             dataset.append(self.generate_event(i))
 
         filepath = os.path.join(DATA_DIR, "historical_disasters_2005_2026.json")
-        with open(filepath, "w") as f:
+        with open(filepath, "w", encoding="utf-8") as f:
             json.dump(dataset, f, indent=2)
 
         print(f"[SUCCESS] Generated {len(dataset)} historical disaster dataset records at: {filepath}")

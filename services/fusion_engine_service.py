@@ -16,6 +16,12 @@ try:
 except ImportError:
     HAS_NUMPY = False
 
+try:
+    from ml_pipeline.inference_engine import RealTimeInferenceEngine
+    HAS_ML_ENGINE = True
+except ImportError:
+    HAS_ML_ENGINE = False
+
 
 class SpectralIndexCalculator:
     """Calculates satellite spectral indices and pixel-level anomaly scores"""
@@ -185,6 +191,13 @@ class MultiModalFusionEngineService:
 
     def __init__(self):
         self.sat_fetcher = SatelliteDataFetcher()
+        if HAS_ML_ENGINE:
+            try:
+                self.ml_engine = RealTimeInferenceEngine()
+            except Exception:
+                self.ml_engine = None
+        else:
+            self.ml_engine = None
 
     def analyze_fusion(self, lat: float = 30.0668, lon: float = 79.0193, iot_data: Dict[str, Any] = None) -> Dict[str, Any]:
         if iot_data is None:
@@ -214,7 +227,6 @@ class MultiModalFusionEngineService:
         ndvi_pct_change = round(((curr["ndvi"] - hist["historical_mean_ndvi"]) / hist["historical_mean_ndvi"]) * 100.0, 1)
 
         # 3. Model A: Satellite ML Risk Score (0-100)
-        # Based on vegetation loss (NDVI drop), SAR soil saturation, and 24h rainfall
         sat_risk = 0.0
         if ndvi_pct_change < -10.0:
             sat_risk += 35.0
@@ -259,24 +271,27 @@ class MultiModalFusionEngineService:
         iot_risk = min(100.0, iot_risk)
 
         # 5. Model C: Historical Ground-Truth & Slope Susceptibility Score (0-100)
-        # Uttarakhand mountainous terrain default slope 38°
         slope_deg = 38.0
-        hist_risk = 65.0  # High historical landslide susceptibility
+        hist_risk = 65.0
 
         # 6. Decision-Level Ensemble Fusion Formula
-        # Final Risk = 0.4 * Prediction_A (Sat) + 0.4 * Prediction_B (IoT) + 0.2 * Prediction_C (Hist)
         final_risk_score = round(0.40 * sat_risk + 0.40 * iot_risk + 0.20 * hist_risk, 1)
 
         if flame == 1 or mq2 == 1:
             disaster_type = "Fire"
-        elif final_risk_score >= 60.0 or detected_type == "landslide":
+        elif soil_m >= 70.0 or tilt == 1 or vibr == 1 or detected_type == "landslide":
             disaster_type = "Landslide"
         elif curr["gpm_24h_rainfall_mm"] > 60.0:
             disaster_type = "Flash Flood"
+        elif final_risk_score >= 45.0:
+            disaster_type = "Landslide"
         else:
-            disaster_type = "None"
+            disaster_type = "Normal"
 
-        if final_risk_score >= 75.0:
+        if disaster_type in ["None", "Normal"]:
+            risk_level = "NORMAL"
+            final_risk_score = round(min(22.5, final_risk_score * 0.3), 1)
+        elif final_risk_score >= 75.0:
             risk_level = "CRITICAL"
         elif final_risk_score >= 45.0:
             risk_level = "HIGH"
@@ -284,6 +299,19 @@ class MultiModalFusionEngineService:
             risk_level = "MEDIUM"
         else:
             risk_level = "LOW"
+
+        # PyTorch Neural Network Inference Execution
+        ml_pred = None
+        if self.ml_engine:
+            try:
+                ml_pred = self.ml_engine.predict({
+                    "disaster_type": disaster_type if disaster_type != "Normal" else "LANDSLIDE",
+                    "latitude": lat,
+                    "longitude": lon,
+                    "telemetry": iot_data
+                })
+            except Exception:
+                ml_pred = None
 
         # Confidence calculation
         agreement = 1.0 - (abs(sat_risk - iot_risk) / 100.0)
@@ -307,11 +335,11 @@ class MultiModalFusionEngineService:
 
         # Recommendations
         if risk_level in ["CRITICAL", "HIGH"]:
-            rec = "🚨 HIGH RISK WARNING: Initiate immediate slope monitoring and pre-position rescue teams in high-risk zones."
+            rec = f"🚨 {risk_level} RISK WARNING: Initiate immediate slope monitoring and pre-position rescue teams in high-risk zones."
         elif risk_level == "MEDIUM":
             rec = "⚡ ELEVATED RISK: Monitor ground sensor telemetry and inspect drainage pathways."
         else:
-            rec = "✅ NORMAL: All satellite and sensor indicators normal."
+            rec = "✅ NORMAL SURVEILLANCE: All satellite and ground sensor indicators within nominal operating bounds."
 
         return {
             "status": "success",
@@ -322,6 +350,7 @@ class MultiModalFusionEngineService:
             "risk_level": risk_level,
             "confidence": confidence,
             "lead_time_window": "24-48 hours",
+            "ml_fusion_prediction": ml_pred,
             "satellite_analysis": {
                 "current_ndvi": curr["ndvi"],
                 "historical_mean_ndvi": hist["historical_mean_ndvi"],

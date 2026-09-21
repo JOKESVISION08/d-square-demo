@@ -27,7 +27,7 @@ class DataIngestionPipeline:
             return self.generator.generate_historical_dataset(num_records=num_records)
 
         try:
-            with open(self.dataset_file, "r") as f:
+            with open(self.dataset_file, "r", encoding="utf-8") as f:
                 data = json.load(f)
             print(f"Loaded {len(data)} historical disaster records from {self.dataset_file}.")
             return data

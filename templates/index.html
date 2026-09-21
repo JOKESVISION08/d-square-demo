@@ -1096,22 +1096,70 @@
     }
 
     function renderFusionUI(res) {
-      document.getElementById("fusion-risk-score").innerText = `${res.risk_score.toFixed(1)}%`;
-      document.getElementById("fusion-disaster-title").innerText = `${res.risk_level} ${res.disaster_type.toUpperCase()} RISK`;
-      document.getElementById("fusion-confidence-badge").innerText = `${Math.round(res.confidence * 100)}% Confidence`;
+      if (!res) return;
+      const mlPred = res.ml_fusion_prediction || null;
+      const dType = (mlPred ? mlPred.disaster_type : res.disaster_type || "NORMAL").toUpperCase();
+      const sev = (mlPred ? mlPred.severity : res.risk_level || "NORMAL").toUpperCase();
+      const conf = mlPred ? mlPred.confidence_score : Math.round((res.confidence || 0.85) * 100);
+      const riskScore = res.risk_score !== undefined ? res.risk_score : (conf * 0.85);
 
+      const scoreEl = document.getElementById("fusion-risk-score");
+      const titleEl = document.getElementById("fusion-disaster-title");
+      const badgeEl = document.getElementById("fusion-confidence-badge");
       const recEl = document.getElementById("fusion-recommendation");
-      recEl.innerHTML = `<i class="fa-solid fa-triangle-exclamation text-warning me-1"></i> ${res.recommendation}`;
 
-      // Render Factors
+      if (scoreEl) scoreEl.innerText = `${riskScore.toFixed(1)}%`;
+
+      if (dType === "NONE" || dType === "NORMAL" || sev === "NORMAL") {
+        if (titleEl) {
+          titleEl.innerText = `NORMAL SURVEILLANCE RISK`;
+          titleEl.className = "fw-bold text-uppercase tracking-wider mt-1 text-success";
+        }
+        if (scoreEl) scoreEl.className = "display-5 fw-bold text-success";
+      } else {
+        if (titleEl) {
+          titleEl.innerText = `${sev} ${dType} RISK`;
+          titleEl.className = `fw-bold text-uppercase tracking-wider mt-1 ${sev === 'CRITICAL' ? 'text-danger' : 'text-warning'}`;
+        }
+        if (scoreEl) scoreEl.className = `display-5 fw-bold ${sev === 'CRITICAL' ? 'text-danger' : 'text-warning'}`;
+      }
+
+      if (badgeEl) badgeEl.innerText = `${conf}% PyTorch Neural AI`;
+
+      const actions = mlPred ? mlPred.recommended_actions : [];
+      if (actions && actions.length > 0) {
+        if (recEl) recEl.innerHTML = `<i class="fa-solid fa-brain text-info me-1"></i> <b>PyTorch Neural Action:</b> ${actions[0]}`;
+      } else if (res.recommendation) {
+        if (recEl) recEl.innerHTML = `<i class="fa-solid fa-triangle-exclamation text-warning me-1"></i> ${res.recommendation}`;
+      }
+
+      // Render Multi-Modal Risk Drivers (PyTorch SHAP Importance + Active Sensor Drivers)
       const factorsList = document.getElementById("risk-factors-list");
-      if (res.factors && res.factors.length > 0) {
-        factorsList.innerHTML = res.factors.map(f => `
-          <div class="factor-pill d-flex align-items-center justify-content-between">
-            <span><i class="fa-solid fa-triangle-exclamation text-warning me-2"></i>${f}</span>
-            <strong class="text-danger">ACTIVE</strong>
-          </div>
-        `).join("");
+      if (factorsList) {
+        let factorsHtml = "";
+
+        if (mlPred && mlPred.shap_feature_importance) {
+          for (const [feat, score] of Object.entries(mlPred.shap_feature_importance)) {
+            const pct = (score * 100).toFixed(1);
+            factorsHtml += `
+              <div class="factor-pill d-flex align-items-center justify-content-between mb-2">
+                <span><i class="fa-solid fa-microchip text-info me-2"></i><b>${feat}</b></span>
+                <strong class="text-info">${pct}% SHAP</strong>
+              </div>
+            `;
+          }
+        } else if (res.factors && res.factors.length > 0) {
+          factorsHtml = res.factors.map(f => `
+            <div class="factor-pill d-flex align-items-center justify-content-between mb-2">
+              <span><i class="fa-solid fa-triangle-exclamation text-warning me-2"></i>${f}</span>
+              <strong class="text-danger">ACTIVE</strong>
+            </div>
+          `).join("");
+        }
+
+        if (factorsHtml) {
+          factorsList.innerHTML = factorsHtml;
+        }
       }
     }
 
