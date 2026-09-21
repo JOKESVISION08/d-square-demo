@@ -461,6 +461,17 @@ class MultiModalFusionEngineService:
         # Execute decision-level fusion analysis
         fusion = self.analyze_fusion(lat=lat, lon=lon, iot_data=iot_data)
 
+        # Execute Pixel-Level Image Analysis (PAST vs CURRENT)
+        from ml_pipeline.pixel_analysis_engine import pixel_analysis_engine
+        pixel_res = pixel_analysis_engine.analyze_pixel_changes(
+            past_scene={"filename": prev_filename},
+            curr_scene={"filename": curr_filename},
+            disaster_type=fusion.get("disaster_type", "LANDSLIDE"),
+            center_lat=lat,
+            center_lon=lon,
+            resolution_m=20.0
+        )
+
         # Build parameter dictionaries for multi-parameter detection
         iot = iot_data or {"soil_moisture": 88.0, "temperature": 26.5, "tilt": 1, "vibration": 1, "water_level": 2.5}
         sat = {"ndwi": 0.65, "water_body_expansion": 35.0, "sar_backscatter_db": nisar.get("sar_l_band_db", -12.4)}
@@ -469,19 +480,23 @@ class MultiModalFusionEngineService:
 
         multi_param_res = MultiParameterFusionEngine.analyze_all_disasters(iot, sat, wx, ai)
 
-        # Attach NISAR SAR & Uploaded scene comparison results
+        # Attach NISAR SAR, Pixel Analysis & Uploaded scene comparison results
         fusion["multi_parameter_detection"] = multi_param_res
+        fusion["pixel_analysis"] = pixel_res
+        fusion["affected_pixels"] = pixel_res.get("affected_pixels", [])
+        fusion["polygon_boundary"] = pixel_res.get("polygon_boundary", [])
         fusion["uploaded_comparison"] = {
             "prev_filename": prev_filename,
             "curr_filename": curr_filename,
             "scene_status": "UPLOAD_COMPARE_ANALYZED",
             "detected_vegetation_loss_pct": -12.4,
             "computed_ground_displacement_mm": nisar["ground_deformation_mm_yr"],
-            "nisar_radar_pixels": nisar
+            "nisar_radar_pixels": nisar,
+            "pixel_analysis": pixel_res
         }
 
         if fusion["risk_score"] >= 60.0:
-            fusion["recommendation"] = "🚨 AUTOMATIC AI PREDICTION: High risk detected from uploaded satellite scene comparison and ground sensors. Initiate emergency protocols."
+            fusion["recommendation"] = "🚨 AUTOMATIC AI PREDICTION: High risk detected from pixel-level uploaded satellite scene comparison and ground sensors. Initiate emergency protocols."
 
         return fusion
 

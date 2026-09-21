@@ -956,6 +956,10 @@
         if (res && res.status === "success") {
           statusText.innerText = "AI Analysis Complete";
           renderFusionUI(res);
+
+          const poly = res.polygon_boundary || (res.pixel_analysis ? res.pixel_analysis.polygon_boundary : null);
+          const pxs = res.affected_pixels || (res.pixel_analysis ? res.pixel_analysis.affected_pixels : null);
+          if (poly) drawPixelPolygonOnMap(poly, pxs);
         } else {
           statusText.innerText = "Ready for AI";
         }
@@ -964,6 +968,44 @@
       } finally {
         btn.disabled = false;
         btn.innerHTML = `<i class="fa-solid fa-wand-magic-sparkles me-1"></i> RUN AUTOMATIC AI DISASTER PREDICTION`;
+      }
+    }
+
+    let currentPixelPolygonLayer = null;
+    let currentPixelMarkersGroup = null;
+
+    function drawPixelPolygonOnMap(polygonCoords, affectedPixels) {
+      if (!map) return;
+      if (currentPixelPolygonLayer) map.removeLayer(currentPixelPolygonLayer);
+      if (currentPixelMarkersGroup) map.removeLayer(currentPixelMarkersGroup);
+
+      if (polygonCoords && polygonCoords.length > 0) {
+        const latLngs = polygonCoords.map(p => Array.isArray(p) ? p : [p.lat, p.lon]);
+        currentPixelPolygonLayer = L.polygon(latLngs, {
+          color: '#ef4444',
+          weight: 3,
+          fillColor: '#dc2626',
+          fillOpacity: 0.35,
+          dashArray: '5, 10'
+        }).addTo(map);
+
+        currentPixelPolygonLayer.bindPopup("<b>🚨 AI PIXEL-LEVEL DISASTER BOUNDARY</b><br>GeoJSON Boundary generated from PAST vs CURRENT satellite pixel change clusters.");
+        map.fitBounds(currentPixelPolygonLayer.getBounds(), { padding: [20, 20] });
+      }
+
+      if (affectedPixels && affectedPixels.length > 0) {
+        const markers = [];
+        affectedPixels.slice(0, 30).forEach(px => {
+          const m = L.circleMarker([px.lat, px.lon], {
+            radius: 4,
+            color: '#f97316',
+            fillColor: '#ef4444',
+            fillOpacity: 0.8
+          });
+          m.bindPopup(`<b>Pixel Centroid:</b> (${px.lat.toFixed(5)}°N, ${px.lon.toFixed(5)}°E)<br><b>Class:</b> ${px.class_name || 'AFFECTED'}`);
+          markers.push(m);
+        });
+        currentPixelMarkersGroup = L.layerGroup(markers).addTo(map);
       }
     }
 

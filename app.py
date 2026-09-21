@@ -1177,6 +1177,25 @@ def get_ml_explainability():
     }
     return jsonify({"status": "success", "shap_importance": shap_data})
 
+@app.route("/api/ml/pixel_change_detect", methods=["POST"])
+def post_ml_pixel_change_detect():
+    from ml_pipeline.pixel_analysis_engine import pixel_analysis_engine
+    body = request.get_json(silent=True) or {}
+    disaster_type = body.get("disaster_type", "FLOOD")
+    lat = float(body.get("latitude", body.get("lat", 19.0760)))
+    lon = float(body.get("longitude", body.get("lon", 72.8777)))
+    resolution = float(body.get("resolution_m", 20.0))
+
+    res = pixel_analysis_engine.analyze_pixel_changes(
+        past_scene=body.get("past_scene", {}),
+        curr_scene=body.get("curr_scene", {}),
+        disaster_type=disaster_type,
+        center_lat=lat,
+        center_lon=lon,
+        resolution_m=resolution
+    )
+    return jsonify(res)
+
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5001, debug=True)

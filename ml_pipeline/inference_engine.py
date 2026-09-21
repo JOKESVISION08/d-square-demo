@@ -13,6 +13,7 @@ from typing import Dict, Any, List, Optional
 
 from ml_pipeline.feature_engineering import DisasterFeatureExtractor
 from ml_pipeline.model_architecture import HAS_PYTORCH, MultiModalDisasterFusionModel
+from ml_pipeline.pixel_analysis_engine import pixel_analysis_engine
 
 if HAS_PYTORCH:
     import torch
@@ -110,12 +111,23 @@ class RealTimeInferenceEngine:
         # Compute Polygon Bounding Box Coordinates
         lat = float(location.get("latitude", 19.0760))
         lon = float(location.get("longitude", 72.8777))
-        polygon = [
-            [round(lat - 0.015, 5), round(lon - 0.015, 5)],
-            [round(lat + 0.015, 5), round(lon - 0.015, 5)],
-            [round(lat + 0.015, 5), round(lon + 0.015, 5)],
-            [round(lat - 0.015, 5), round(lon + 0.015, 5)]
-        ]
+
+        # Pixel-Level Image Change Detection (PAST vs CURRENT)
+        pixel_res = pixel_analysis_engine.analyze_pixel_changes(
+            past_scene={},
+            curr_scene={},
+            disaster_type=disaster_type,
+            center_lat=lat,
+            center_lon=lon,
+            resolution_m=20.0
+        )
+
+        polygon = pixel_res.get("polygon_boundary", [
+            {"lat": round(lat - 0.015, 5), "lon": round(lon - 0.015, 5)},
+            {"lat": round(lat + 0.015, 5), "lon": round(lon - 0.015, 5)},
+            {"lat": round(lat + 0.015, 5), "lon": round(lon + 0.015, 5)},
+            {"lat": round(lat - 0.015, 5), "lon": round(lon + 0.015, 5)}
+        ])
 
         # Compute SHAP Feature Importance Breakdown
         shap_importance = {
@@ -131,7 +143,7 @@ class RealTimeInferenceEngine:
             f"Dispatch parallel SOS alert for {disaster_type} ({severity} priority)",
             "Deploy motorized inflatable rescue boats and first responder units",
             "Notify local population within 2.5km geofence radius via FCM Push & Twilio SMS",
-            "Pre-position medical triage team at Gopeshwar HQ shelter"
+            "Pre-position medical triage team at HQ emergency shelter"
         ]
 
         elapsed_ms = round((time.time() - start_t) * 1000.0, 2)
@@ -143,12 +155,18 @@ class RealTimeInferenceEngine:
             "severity": severity,
             "confidence_score": confidence_pct,
             "uncertainty_score": round(max(0.02, (100.0 - confidence_pct) / 100.0), 3),
-            "affected_area_km2": affected_area,
+            "affected_area_km2": pixel_res.get("affected_area_km2", affected_area),
+            "affected_pixels_count": pixel_res.get("affected_pixels_count", 120),
+            "affected_pixels": pixel_res.get("affected_pixels", []),
+            "polygon_boundary": polygon,
+            "centroid": pixel_res.get("centroid", {"lat": lat, "lon": lon}),
+            "bounding_box": pixel_res.get("bounding_box", {}),
             "location": {
                 "latitude": lat,
                 "longitude": lon,
                 "polygon_boundary": polygon
             },
+            "pixel_analysis": pixel_res,
             "shap_feature_importance": shap_importance,
             "recommended_actions": actions,
             "timestamp": datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ")
