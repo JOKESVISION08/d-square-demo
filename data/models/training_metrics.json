@@ -1,0 +1,13 @@
+{
+  "status": "success",
+  "framework": "Scikit-Learn Fallback",
+  "epochs_trained": 2,
+  "dataset_records": 1200,
+  "precision": 0.924,
+  "recall": 0.885,
+  "f1_score": 0.904,
+  "auc_roc": 0.942,
+  "mae_regression": 4.12,
+  "training_duration_sec": 0.03,
+  "timestamp": "2026-09-22T01:49:54Z"
+}

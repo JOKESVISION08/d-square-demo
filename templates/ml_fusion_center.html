@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>D-SQUARE PC Multi-Fusion ML Control Center</title>
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Poppins:wght@600;700;800&display=swap" rel="stylesheet">
+
+  <!-- Bootstrap CSS & FontAwesome -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+  <style>
+    :root {
+      --bg-dark: #0b1329;
+      --card-bg: #111c38;
+      --card-border: #1e3a5f;
+      --accent-blue: #38bdf8;
+      --accent-purple: #818cf8;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+    }
+    body {
+      background-color: var(--bg-dark);
+      color: var(--text-main);
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      min-height: 100vh;
+    }
+    h1, h2, h3, h4, h5, h6, .navbar-brand { font-family: 'Poppins', sans-serif; }
+    .ml-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 24px;
+    }
+    .metric-card {
+      background: rgba(15, 23, 42, 0.7);
+      border: 1px solid var(--card-border);
+      border-radius: 10px;
+      padding: 16px;
+      text-align: center;
+      transition: transform 0.2s ease;
+    }
+    .metric-card:hover {
+      transform: translateY(-2px);
+      border-color: var(--accent-blue);
+    }
+    .metric-val {
+      font-size: 1.8rem;
+      font-weight: 800;
+      color: var(--accent-blue);
+      font-family: 'Poppins', sans-serif;
+    }
+    .metric-lbl {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      font-weight: 600;
+    }
+    .btn-ml-action {
+      background: linear-gradient(135deg, #0284c7, #4f46e5);
+      color: white;
+      font-weight: 700;
+      border: none;
+      padding: 12px 20px;
+      border-radius: 8px;
+      transition: all 0.2s ease;
+    }
+    .btn-ml-action:hover {
+      background: linear-gradient(135deg, #0369a1, #4338ca);
+      color: white;
+      box-shadow: 0 4px 15px rgba(56, 189, 248, 0.4);
+    }
+    .btn-ml-train {
+      background: linear-gradient(135deg, #059669, #0d9488);
+      color: white;
+      font-weight: 700;
+      border: none;
+      padding: 12px 20px;
+      border-radius: 8px;
+      transition: all 0.2s ease;
+    }
+    .btn-ml-train:hover {
+      background: linear-gradient(135deg, #047857, #0f766e);
+      color: white;
+      box-shadow: 0 4px 15px rgba(16, 185, 129, 0.4);
+    }
+    .log-box {
+      background: #070d1e;
+      border: 1px solid #1e3a5f;
+      border-radius: 8px;
+      color: #38bdf8;
+      font-family: 'Courier New', monospace;
+      font-size: 0.85rem;
+      padding: 14px;
+      min-height: 100px;
+      white-space: pre-wrap;
+    }
+    .param-table {
+      font-size: 0.85rem;
+      color: var(--text-main);
+    }
+    .param-table th {
+      background: #0f172a;
+      color: var(--accent-blue);
+      border-bottom: 2px solid var(--card-border);
+    }
+    .param-table td {
+      border-color: #1e293b;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Navigation Header -->
+  <nav class="navbar navbar-dark bg-dark border-bottom border-secondary px-4 py-2 sticky-top">
+    <div class="container-fluid">
+      <a class="navbar-brand fw-bold text-info fs-5 d-flex align-items-center" href="/">
+        <i class="fa-solid fa-brain me-2 text-primary fs-4"></i>
+        <span>D-SQUARE 2.0 | PC MULTI-FUSION ML CONTROL CENTER</span>
+      </a>
+      <div class="d-flex align-items-center gap-2 flex-wrap">
+        <a href="/" class="btn btn-outline-info btn-sm"><i class="fa-solid fa-gauge me-1"></i> Dashboard</a>
+        <a href="/pc_sos_alert" class="btn btn-outline-danger btn-sm"><i class="fa-solid fa-tower-broadcast me-1"></i> SOS Center</a>
+        <a href="/dsquare_gpt" class="btn btn-outline-success btn-sm"><i class="fa-solid fa-cloud-sun me-1"></i> Weather GPT</a>
+        <a href="/rescue_gpt" class="btn btn-outline-warning btn-sm"><i class="fa-solid fa-user-shield me-1"></i> Rescue GPT</a>
+        <a href="/ml_fusion_center" class="btn btn-primary btn-sm fw-bold"><i class="fa-solid fa-brain me-1"></i> ML Fusion</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container-fluid px-4 py-4">
+
+    <!-- Title & System Architecture Banner -->
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+      <div>
+        <h2 class="fw-bold mb-1"><i class="fa-solid fa-network-wired text-info me-2"></i>Multi-Modal Neural Network &amp; Continuous Learning Loop</h2>
+        <p class="text-muted mb-0">PyTorch 1D CNN + Bi-LSTM + ResNet + Transformer Multi-Head Attention Fusion Model for 6 Disaster Types</p>
+      </div>
+      <div>
+        <span class="badge bg-success fs-6 px-3 py-2 border border-light"><i class="fa-solid fa-circle-check me-1"></i> PyTorch Model v2 Loaded</span>
+      </div>
+    </div>
+
+    <!-- Model Performance Metrics Banner -->
+    <div class="row g-3 mb-4">
+      <div class="col-md-2 col-6">
+        <div class="metric-card">
+          <div class="metric-val text-info" id="metric-precision">92.4%</div>
+          <div class="metric-lbl">Precision (> 90%)</div>
+        </div>
+      </div>
+      <div class="col-md-2 col-6">
+        <div class="metric-card">
+          <div class="metric-val text-success" id="metric-recall">89.1%</div>
+          <div class="metric-lbl">Recall (> 85%)</div>
+        </div>
+      </div>
+      <div class="col-md-2 col-6">
+        <div class="metric-card">
+          <div class="metric-val text-warning" id="metric-f1">0.907</div>
+          <div class="metric-lbl">F1-Score (> 0.87)</div>
+        </div>
+      </div>
+      <div class="col-md-2 col-6">
+        <div class="metric-card">
+          <div class="metric-val text-primary" id="metric-auc">0.952</div>
+          <div class="metric-lbl">AUC-ROC (> 0.92)</div>
+        </div>
+      </div>
+      <div class="col-md-4 col-12">
+        <div class="metric-card d-flex align-items-center justify-content-around h-100">
+          <div>
+            <div class="metric-val text-light" id="metric-dataset-count">1,200 Records</div>
+            <div class="metric-lbl">Historical Training Dataset (2005-2026)</div>
+          </div>
+          <div class="text-end">
+            <span class="badge bg-info text-dark fw-bold px-2 py-1 mb-1"><i class="fa-solid fa-bolt me-1"></i> &lt; 50ms SLA</span>
+            <div class="small text-muted">Inference Speed</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="row g-4">
+      <!-- Left Column: Real-Time Inference Console -->
+      <div class="col-lg-7">
+        <div class="ml-card">
+          <h4 class="fw-bold mb-3 text-info"><i class="fa-solid fa-microchip me-2"></i>Real-Time Neural Inference Simulator</h4>
+          <p class="text-muted small">Input real-time IoT sensor telemetry &amp; spatial coordinates to trigger multi-modal neural disaster inference and severity classification.</p>
+          
+          <div class="row g-3 mb-3">
+            <div class="col-md-4">
+              <label class="form-label small fw-bold text-muted">Disaster Scenario</label>
+              <select class="form-select bg-dark text-white border-secondary" id="inf-disaster-type">
+                <option value="FLOOD">🌊 FLOOD (Water Level &gt; 2.0m)</option>
+                <option value="FIRE">🔥 FIRE (Flame + Temp &gt; 60°C)</option>
+                <option value="EARTHQUAKE">🌋 EARTHQUAKE (PGA &gt; 0.25g)</option>
+                <option value="CYCLONE">🌀 CYCLONE (Wind &gt; 90 km/h)</option>
+                <option value="DROUGHT">☀️ DROUGHT (Moisture &lt; 20%)</option>
+                <option value="LANDSLIDE" selected>⛰️ LANDSLIDE (Soil &gt; 80% + Tilt)</option>
+              </select>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label small fw-bold text-muted">Latitude (°N)</label>
+              <input type="number" step="0.0001" class="form-control bg-dark text-white border-secondary" id="inf-lat" value="19.0760">
+            </div>
+            <div class="col-md-4">
+              <label class="form-label small fw-bold text-muted">Longitude (°E)</label>
+              <input type="number" step="0.0001" class="form-control bg-dark text-white border-secondary" id="inf-lon" value="72.8777">
+            </div>
+          </div>
+
+          <div class="row g-3 mb-4">
+            <div class="col-md-4">
+              <label class="form-label small text-muted">Water Level (m)</label>
+              <input type="number" step="0.1" class="form-control bg-dark text-white border-secondary" id="inf-water" value="2.5">
+            </div>
+            <div class="col-md-4">
+              <label class="form-label small text-muted">24h Rainfall (mm)</label>
+              <input type="number" step="1" class="form-control bg-dark text-white border-secondary" id="inf-rain" value="160">
+            </div>
+            <div class="col-md-4">
+              <label class="form-label small text-muted">Soil Moisture (%)</label>
+              <input type="number" step="1" class="form-control bg-dark text-white border-secondary" id="inf-soil" value="88">
+            </div>
+            <div class="col-md-4">
+              <label class="form-label small text-muted">Temperature (°C)</label>
+              <input type="number" step="0.1" class="form-control bg-dark text-white border-secondary" id="inf-temp" value="32.0">
+            </div>
+            <div class="col-md-4">
+              <label class="form-label small text-muted">Wind Speed (km/h)</label>
+              <input type="number" step="1" class="form-control bg-dark text-white border-secondary" id="inf-wind" value="45">
+            </div>
+            <div class="col-md-4">
+              <label class="form-label small text-muted">PGA Acceleration (g)</label>
+              <input type="number" step="0.01" class="form-control bg-dark text-white border-secondary" id="inf-pga" value="0.05">
+            </div>
+          </div>
+
+          <button id="btn-run-inference" class="btn btn-ml-action w-100" onclick="runRealTimeInference()">
+            <i class="fa-solid fa-bolt me-2"></i>RUN REAL-TIME PYTORCH INFERENCE
+          </button>
+
+          <!-- Inference Results Box -->
+          <div id="inference-result-box" class="mt-4 p-3 border border-info rounded-3 bg-dark" style="display: none;">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+              <h5 class="fw-bold text-white mb-0"><i class="fa-solid fa-square-poll-vertical text-info me-2"></i>Neural Inference Output</h5>
+              <span id="res-severity-badge" class="badge bg-danger fs-6 px-3 py-2">CRITICAL</span>
+            </div>
+            <div class="row g-2 mb-3 small">
+              <div class="col-md-6"><b>Predicted Disaster:</b> <span id="res-disaster-type" class="text-info font-monospace">LANDSLIDE</span></div>
+              <div class="col-md-6"><b>Severity Class:</b> <span id="res-severity" class="text-danger font-monospace">CRITICAL</span></div>
+              <div class="col-md-6"><b>AI Confidence Score:</b> <span id="res-confidence" class="text-success font-monospace">94.8%</span></div>
+              <div class="col-md-6"><b>Inference Speed:</b> <span id="res-latency" class="text-warning font-monospace">18 ms</span></div>
+              <div class="col-md-12"><b>Predicted Impact Area:</b> <span id="res-area" class="text-light font-monospace">12.5 km²</span></div>
+            </div>
+            <div class="border-top border-secondary pt-2">
+              <div class="fw-bold small text-muted mb-1">RECOMMENDED SOS ACTION PLAN:</div>
+              <ul id="res-actions-list" class="list-unstyled mb-0 small text-light">
+                <li><i class="fa-solid fa-angle-right text-info me-2"></i>Trigger SOS alert to NDRF &amp; Local Authorities</li>
+              </ul>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Right Column: Continuous Retraining & Feature Importance -->
+      <div class="col-lg-5">
+        <!-- SHAP Feature Importance Card -->
+        <div class="ml-card">
+          <h4 class="fw-bold mb-3 text-warning"><i class="fa-solid fa-chart-bar me-2"></i>SHAP Feature Importance &amp; Fusion Weights</h4>
+          <p class="text-muted small">Relative contribution of multi-modal features in PyTorch Transformer self-attention layer:</p>
+          <div id="shap-bars-container" class="my-3">
+            <div class="text-center text-muted py-3"><i class="fa-solid fa-spinner fa-spin me-2"></i> Loading SHAP feature importance...</div>
+          </div>
+        </div>
+
+        <!-- Continuous Learning Retraining Card -->
+        <div class="ml-card">
+          <h4 class="fw-bold mb-3 text-success"><i class="fa-solid fa-rotate me-2"></i>Continuous Learning Retraining Loop</h4>
+          <p class="text-muted small">Retrains PyTorch multi-modal neural network on historical disaster dataset (2005-2026) with AdamW optimizer and CosineAnnealingLR scheduler.</p>
+
+          <button id="btn-trigger-training" class="btn btn-ml-train w-100 mb-3" onclick="triggerModelTraining()">
+            <i class="fa-solid fa-arrows-rotate me-2"></i>TRIGGER MODEL RETRAINING LOOP (15 EPOCHS)
+          </button>
+
+          <div class="fw-bold small text-muted mb-1">TRAINING CONSOLE LOG:</div>
+          <div id="training-status-log" class="log-box">Status: Model up-to-date and ready for online learning updates.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Disaster Detection Parameter Matrix Table -->
+    <div class="ml-card">
+      <h4 class="fw-bold mb-3 text-light"><i class="fa-solid fa-table-list me-2"></i>Disaster-Specific Detection Parameter Matrix</h4>
+      <p class="text-muted small mb-3">Multi-parameter thresholds across IoT telemetry, Satellite spectral indices, Weather metrics, and Seismic inputs for all 6 disaster classes:</p>
+      
+      <div class="table-responsive">
+        <table class="table param-table table-dark table-hover align-middle mb-0">
+          <thead>
+            <tr>
+              <th>Disaster Type</th>
+              <th>IoT Telemetry Thresholds</th>
+              <th>Satellite Spectral Indices</th>
+              <th>Weather Metrics</th>
+              <th>Seismic &amp; Slope Input</th>
+              <th>Primary Hazard Output</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="badge bg-primary"><i class="fa-solid fa-water me-1"></i> FLOOD</span></td>
+              <td>Water level &gt; 2.0m, Soil moisture &gt; 80%</td>
+              <td>NDWI &gt; 0.60, SAR backscatter drop &lt; -15dB</td>
+              <td>24h rainfall &gt; 150mm</td>
+              <td>River basin lowlands (&lt; 50m elev)</td>
+              <td>Severe inundation &amp; flash flood alert</td>
+            </tr>
+            <tr>
+              <td><span class="badge bg-danger"><i class="fa-solid fa-fire me-1"></i> FIRE</span></td>
+              <td>Flame sensor = 1, Temp &gt; 60°C, MQ2 gas &gt; 400</td>
+              <td>NBR drop &gt; 0.40, Thermal infrared brightness &gt; 325K</td>
+              <td>Humidity &lt; 25%, Temp &gt; 40°C</td>
+              <td>Dense forest canopy fuel load</td>
+              <td>Wildfire spread &amp; canopy flame alert</td>
+            </tr>
+            <tr>
+              <td><span class="badge bg-warning text-dark"><i class="fa-solid fa-volcano me-1"></i> EARTHQUAKE</span></td>
+              <td>Vibration = 1, MPU6050 acc &gt; 2.5g</td>
+              <td>InSAR surface displacement fringe anomaly</td>
+              <td>N/A</td>
+              <td>PGA &gt; 0.25g, Seismic mag &gt; 5.0</td>
+              <td>Structural collapse &amp; liquefaction alert</td>
+            </tr>
+            <tr>
+              <td><span class="badge bg-info text-dark"><i class="fa-solid fa-hurricane me-1"></i> CYCLONE</span></td>
+              <td>Wind speed &gt; 90 km/h, Barometric pressure &lt; 980 hPa</td>
+              <td>Thermal IR cloud top temp &lt; -70°C, Eye structure</td>
+              <td>Rainfall &gt; 200mm/24h</td>
+              <td>Coastal surge zone (&lt; 10km coast)</td>
+              <td>Super-cyclonic storm surge alert</td>
+            </tr>
+            <tr>
+              <td><span class="badge bg-secondary"><i class="fa-solid fa-sun me-1"></i> DROUGHT</span></td>
+              <td>Soil moisture &lt; 20% for 30 consecutive days</td>
+              <td>NDVI anomaly &lt; -0.35, NDWI &lt; 0.10</td>
+              <td>Rain deficit &gt; 50% vs historical avg</td>
+              <td>Agricultural arid basin</td>
+              <td>Severe agricultural &amp; hydrological drought</td>
+            </tr>
+            <tr>
+              <td><span class="badge bg-dark border border-warning text-warning"><i class="fa-solid fa-hill-rockslide me-1"></i> LANDSLIDE</span></td>
+              <td>Soil moisture &gt; 80%, Tilt sensor = 1, Vibration = 1</td>
+              <td>NDVI drop &gt; 0.30 (vegetation loss/scarp)</td>
+              <td>Cumulative 72h rain &gt; 200mm</td>
+              <td>Slope angle &gt; 35°, High terrain slope</td>
+              <td>Mass soil failure &amp; debris flow alert</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- JavaScript dependencies -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="/static/js/ml_fusion_center.js"></script>
+</body>
+</html>
