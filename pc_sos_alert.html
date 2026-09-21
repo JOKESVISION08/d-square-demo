@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>D-SQUARE Standalone PC SOS Alert Center</title>
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Poppins:wght@600;700;800&display=swap" rel="stylesheet">
+
+  <!-- Bootstrap CSS & FontAwesome -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+
+  <style>
+    :root {
+      --bg-dark: #0b1329;
+      --card-bg: #111c38;
+      --card-border: #1e3a5f;
+      --accent-blue: #38bdf8;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+    }
+    body {
+      background-color: var(--bg-dark);
+      color: var(--text-main);
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      min-height: 100vh;
+    }
+    h1, h2, h3, h4, h5, h6, .navbar-brand { font-family: 'Poppins', sans-serif; }
+    .pc-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      padding: 18px;
+      margin-bottom: 20px;
+    }
+    .btn-sos-dispatch {
+      background: linear-gradient(135deg, #ef4444, #b91c1c);
+      color: #fff;
+      font-weight: 800;
+      font-size: 1.15rem;
+      border: 2px solid #f87171;
+      border-radius: 10px;
+      padding: 14px 20px;
+      width: 100%;
+      letter-spacing: 0.5px;
+      transition: all 0.2s ease;
+      box-shadow: 0 0 15px rgba(239, 68, 68, 0.4);
+    }
+    .btn-sos-dispatch:hover {
+      background: #991b1b;
+      color: #fff;
+      box-shadow: 0 0 25px rgba(239, 68, 68, 0.7);
+    }
+    .pixel-legend-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 3px;
+      display: inline-block;
+      margin-right: 4px;
+    }
+    .json-output {
+      background: #070d1e;
+      border: 1px solid #1e3a5f;
+      border-radius: 8px;
+      color: #38bdf8;
+      font-family: 'Courier New', monospace;
+      font-size: 0.85rem;
+      max-height: 280px;
+      overflow-y: auto;
+      padding: 12px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Navigation Header -->
+  <nav class="navbar navbar-dark bg-dark border-bottom border-secondary px-4 py-2">
+    <div class="container-fluid">
+      <a class="navbar-brand fw-bold text-danger fs-5 d-flex align-items-center" href="/">
+        <i class="fa-solid fa-triangle-exclamation me-2 text-warning fs-4"></i>
+        <span>D-SQUARE 2.0 | STANDALONE PC SOS ALERT CENTER</span>
+      </a>
+      <div class="d-flex align-items-center gap-3">
+        <a href="/" class="btn btn-outline-info btn-sm"><i class="fa-solid fa-gauge me-1"></i> Surveillance Dashboard</a>
+        <a href="/rescue_gpt" class="btn btn-outline-warning btn-sm"><i class="fa-solid fa-user-shield me-1"></i> Rescue GPT Console</a>
+        <span class="badge bg-success px-3 py-2 fw-bold"><i class="fa-solid fa-signal me-1"></i> PC CONTROL LIVE</span>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container-fluid px-4 py-3">
+
+    <!-- Title Banner -->
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <div>
+        <h4 class="fw-bold text-white mb-1"><i class="fa-solid fa-tower-broadcast me-2 text-danger"></i>PC Control Center - Parallel SOS Alert System</h4>
+        <p class="text-muted small mb-0">Select disaster map pixels or active geofence boundaries to send real-time parallel alerts to Rescue GPT and D-SQUARE GPT.</p>
+      </div>
+      <div>
+        <span class="badge bg-danger text-uppercase px-3 py-2 fs-6 fw-bold" id="sla-timer">0.0s / 30.0s SLA</span>
+      </div>
+    </div>
+
+    <!-- Quick Preset Disaster Zone Buttons -->
+    <div class="pc-card p-2 mb-3">
+      <div class="d-flex align-items-center gap-2 flex-wrap">
+        <span class="text-warning small fw-bold me-2"><i class="fa-solid fa-crosshairs me-1"></i>PRESET HIGH-RISK ZONES:</span>
+        <button class="btn btn-sm btn-outline-danger fw-bold" onclick="selectPresetZone('mumbai')"><i class="fa-solid fa-water me-1"></i> Mumbai Coastal Flood Zone</button>
+        <button class="btn btn-sm btn-outline-warning fw-bold" onclick="selectPresetZone('chamoli')"><i class="fa-solid fa-hill-rockslide me-1"></i> Chamoli Flash Landslide Zone</button>
+        <button class="btn btn-sm btn-outline-info fw-bold" onclick="selectPresetZone('coastal_cyclone')"><i class="fa-solid fa-hurricane me-1"></i> Coastal Cyclone Red Zone</button>
+      </div>
+    </div>
+
+    <!-- Main Content Grid -->
+    <div class="row g-3">
+
+      <!-- Left Column: Interactive GIS Map with Live Disaster Pixels -->
+      <div class="col-lg-7 col-md-12">
+        <div class="pc-card mb-0">
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <h6 class="fw-bold text-info mb-0"><i class="fa-solid fa-map-location-dot me-2"></i>Live Disaster Happening Map Pixels</h6>
+            <div class="small text-muted">
+              <span class="me-2"><span class="pixel-legend-dot bg-danger"></span> Critical Zone</span>
+              <span class="me-2"><span class="pixel-legend-dot bg-warning"></span> Warning Buffer</span>
+              <span><span class="pixel-legend-dot bg-success"></span> Safe</span>
+            </div>
+          </div>
+
+          <!-- Leaflet Map Container -->
+          <div id="disaster-map" style="height: 490px; border-radius: 8px; border: 1px solid var(--card-border);"></div>
+
+          <div class="d-flex justify-content-between align-items-center mt-2 small text-muted">
+            <div>Selected Pixels: <strong class="text-warning" id="selected-pixel-count">ALL HIGH-RISK PIXELS</strong></div>
+            <div>Click any spatial pixel tile to inspect telemetry or customize geofence.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right Column: Control Parameters & Dispatch Button -->
+      <div class="col-lg-5 col-md-12">
+        <div class="pc-card h-100 d-flex flex-column justify-content-between mb-0">
+          <div>
+            <h6 class="fw-bold text-warning mb-3"><i class="fa-solid fa-sliders me-2"></i>Multi-Fusion SOS Alert Parameters</h6>
+
+            <div class="mb-2">
+              <label class="form-label small text-muted mb-1">Disaster Type:</label>
+              <select class="form-select form-select-sm bg-dark text-white border-secondary fw-bold" id="disaster-type-select">
+                <option value="FLOOD" selected>🌊 FLOOD (Water Inundation)</option>
+                <option value="FIRE">🔥 FIRE (Hotspot / Smoke Plume)</option>
+                <option value="EARTHQUAKE">🌋 EARTHQUAKE (Seismic Shift)</option>
+                <option value="CYCLONE">🌀 CYCLONE (Gale Wind / Surge)</option>
+                <option value="LANDSLIDE">⛰️ LANDSLIDE (Slope Instability)</option>
+                <option value="DROUGHT">🌾 DROUGHT (Water Deficit)</option>
+              </select>
+            </div>
+
+            <div class="row g-2 mb-2">
+              <div class="col-6">
+                <label class="form-label small text-muted mb-1">Severity Level:</label>
+                <select class="form-select form-select-sm bg-dark text-white border-secondary text-danger fw-bold" id="severity-level-select">
+                  <option value="CRITICAL" selected>🚨 CRITICAL (Level 1)</option>
+                  <option value="HIGH">⚠️ HIGH (Level 2)</option>
+                  <option value="MEDIUM">⚡ MEDIUM (Level 3)</option>
+                </select>
+              </div>
+              <div class="col-6">
+                <label class="form-label small text-muted mb-1">Est. Affected Citizens:</label>
+                <input type="number" class="form-control form-control-sm bg-dark text-white border-secondary" id="affected-pop-input" value="8500">
+              </div>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label small text-muted mb-1">Target Geofence / Zone Name:</label>
+              <input type="text" class="form-control form-control-sm bg-dark text-white border-secondary" id="zone-location-input" value="Mumbai Coastal Restricted Zone">
+            </div>
+
+            <!-- Multi-Fusion Telemetry Indicators -->
+            <div class="p-3 bg-black rounded border border-secondary mb-3">
+              <div class="text-info fw-bold small mb-2"><i class="fa-solid fa-microchip me-1"></i> Live Sensor & Satellite Telemetry</div>
+              <div class="row g-2 text-center small">
+                <div class="col-3">
+                  <div class="text-muted">Water Level</div>
+                  <strong class="text-danger" id="val-water-level">2.5m</strong>
+                </div>
+                <div class="col-3">
+                  <div class="text-muted">Rainfall</div>
+                  <strong class="text-warning" id="val-rainfall">150mm/h</strong>
+                </div>
+                <div class="col-3">
+                  <div class="text-muted">Sat. NDWI</div>
+                  <strong class="text-info" id="val-satellite">88% Anomaly</strong>
+                </div>
+                <div class="col-3">
+                  <div class="text-muted">AI Conf.</div>
+                  <strong class="text-success" id="val-confidence">94.8%</strong>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- One-Click Dual Dispatch Button -->
+          <div>
+            <button class="btn-sos-dispatch" id="btn-trigger-pc-sos" onclick="triggerParallelSOSFromPC()">
+              <i class="fa-solid fa-paper-plane me-2"></i> DISPATCH PARALLEL SOS ALERT TO RESCUE GPT & D-SQUARE GPT
+            </button>
+            <div class="text-center small text-muted mt-2">
+              <i class="fa-solid fa-shield-halved me-1 text-success"></i> Guaranteed non-blocking delivery under &lt; 30 seconds SLA.
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Real-Time Dispatch Output & Channel Delivery Feed -->
+    <div class="pc-card mt-3" id="dispatch-result-container" style="display: none;">
+      <div class="d-flex justify-content-between align-items-center border-bottom border-secondary pb-2 mb-3">
+        <h5 class="fw-bold text-success mb-0"><i class="fa-solid fa-circle-check me-2"></i>Parallel SOS Alerts Successfully Dispatched!</h5>
+        <span class="badge bg-info text-dark font-monospace fs-6" id="summary-latency">-- ms</span>
+      </div>
+
+      <!-- Channel Delivery Summary -->
+      <div class="row g-2 text-center mb-3">
+        <div class="col-md-3">
+          <div class="p-2 bg-dark rounded border border-secondary">
+            <div class="small text-muted">Total Citizens Notified</div>
+            <h5 class="fw-bold text-info mb-0" id="summary-notified-citizens">0</h5>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="p-2 bg-dark rounded border border-secondary">
+            <div class="small text-muted">Critical Zone Count</div>
+            <h5 class="fw-bold text-danger mb-0" id="summary-critical-zone">0</h5>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="p-2 bg-dark rounded border border-secondary">
+            <div class="small text-muted">Warning Buffer Count</div>
+            <h5 class="fw-bold text-warning mb-0" id="summary-warning-zone">0</h5>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="p-2 bg-dark rounded border border-secondary">
+            <div class="small text-muted">Delivery Channels</div>
+            <h6 class="fw-bold text-success mb-0">FCM, SMS, WA, Email</h6>
+          </div>
+        </div>
+      </div>
+
+      <!-- Parallel Output Feeds -->
+      <div class="row g-3">
+        <div class="col-md-6">
+          <div class="p-3 bg-dark rounded border border-danger">
+            <h6 class="fw-bold text-danger mb-2"><i class="fa-solid fa-truck-medical me-2"></i>1. RESCUE GPT MANAGEMENT Payload</h6>
+            <pre class="json-output mb-0" id="rescue-gpt-json">Loading...</pre>
+          </div>
+        </div>
+        <div class="col-md-6">
+          <div class="p-3 bg-dark rounded border border-info">
+            <h6 class="fw-bold text-info mb-2"><i class="fa-solid fa-bullhorn me-2"></i>2. D-SQUARE GPT PUBLIC GUIDANCE Payload</h6>
+            <pre class="json-output mb-0" id="dsquare-gpt-json">Loading...</pre>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Scripts -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="/static/js/pc_sos_alert.js"></script>
+</body>
+</html>
