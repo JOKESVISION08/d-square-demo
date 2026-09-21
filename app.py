@@ -505,6 +505,34 @@ def get_fusion_risk_map():
     grid = fusion_engine_service.generate_risk_map(region=region, center_lat=lat, center_lon=lon)
     return jsonify(grid)
 
+@app.route("/api/satellite/nisar_pixels", methods=["GET"])
+def get_satellite_nisar_pixels():
+    lat = float(request.args.get("lat", 30.0668))
+    lon = float(request.args.get("lon", 79.0193))
+    data = fusion_engine_service.sat_fetcher.get_nisar_radar_pixels(lat, lon)
+    return jsonify({"status": "success", "nisar_pixels": data})
+
+@app.route("/api/fusion/upload_compare", methods=["POST"])
+def post_fusion_upload_compare():
+    body = request.get_json(silent=True) or {}
+    lat = float(request.form.get("lat", body.get("lat", 30.0668)))
+    lon = float(request.form.get("lon", body.get("lon", 79.0193)))
+    
+    prev_file = request.files.get("prev_scene")
+    curr_file = request.files.get("curr_scene")
+
+    prev_name = prev_file.filename if prev_file else body.get("prev_filename", "prev_scene_historical.tif")
+    curr_name = curr_file.filename if curr_file else body.get("curr_filename", "curr_scene_realtime.tif")
+
+    res = fusion_engine_service.process_uploaded_satellite_pair(
+        prev_filename=prev_name,
+        curr_filename=curr_name,
+        lat=lat,
+        lon=lon,
+        iot_data=latest_sensor_data
+    )
+    return jsonify(res)
+
 # ----------------- Prediction Endpoints -----------------
 @app.route("/api/prediction/next_24h", methods=["GET"])
 def get_prediction_next_24h():

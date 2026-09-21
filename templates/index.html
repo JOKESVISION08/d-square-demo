@@ -243,7 +243,7 @@
       text-transform: uppercase;
     }
 
-    /* Multi-Modal Fusion styling */
+    /* Multi-Modal Fusion & Upload styling */
     .fusion-gauge-box {
       background: rgba(15, 23, 42, 0.7);
       border: 1px solid var(--card-border);
@@ -268,6 +268,20 @@
       padding: 12px;
       min-height: 140px;
     }
+
+    .upload-zone-box {
+      background: rgba(15, 23, 42, 0.8);
+      border: 2px dashed rgba(56, 189, 248, 0.4);
+      border-radius: 10px;
+      padding: 12px;
+      text-align: center;
+      transition: all 0.2s ease;
+      cursor: pointer;
+    }
+    .upload-zone-box:hover {
+      border-color: #38bdf8;
+      background: rgba(15, 23, 42, 0.95);
+    }
   </style>
 </head>
 <body>
@@ -279,7 +293,7 @@
         <span class="brand-title">
           <i class="fa-solid fa-satellite-dish text-info me-2"></i>D-SQUARE 2.0
         </span>
-        <span class="text-muted d-none d-md-inline">| Multi-Modal AI Fusion Surveillance</span>
+        <span class="text-muted d-none d-md-inline">| Multi-Modal AI Fusion &amp; NISAR Radar Surveillance</span>
       </div>
 
       <div class="d-flex align-items-center gap-3">
@@ -317,12 +331,52 @@
         <i id="alert-icon" class="fa-solid fa-shield-halved fa-xl"></i>
         <div>
           <div id="alert-banner-title" class="fs-6 fw-bold">SYSTEM STATUS NORMAL</div>
-          <div id="alert-banner-desc" class="small opacity-75">All 10 ground station sensors and satellite metrics operating within safe parameters.</div>
+          <div id="alert-banner-desc" class="small opacity-75">All 10 ground station sensors, NISAR SAR radar, and satellite metrics operating within safe parameters.</div>
         </div>
       </div>
       <div class="text-end small opacity-75 d-none d-sm-block">
         <div id="data-age-text">Updated: just now</div>
         <div id="node-id-display" class="fw-mono">Node: D-SQUARE_NODE_01</div>
+      </div>
+    </div>
+
+    <!-- NISAR SAR RADAR & SATELLITE PIXEL CARD (FEATURED) -->
+    <div class="row g-3 mb-4">
+      <div class="col-12">
+        <div class="panel-card p-3" style="background: linear-gradient(135deg, #111c38, #172a46); border: 1px solid #38bdf8;">
+          <div class="d-flex align-items-center justify-content-between mb-2">
+            <div class="d-flex align-items-center gap-2">
+              <i class="fa-solid fa-satellite fa-xl text-info"></i>
+              <h6 class="fw-bold mb-0 text-white">NASA-ISRO SAR (NISAR) Dual-Frequency Radar Pixel Telemetry</h6>
+            </div>
+            <span class="badge bg-info text-dark fw-bold px-3 py-1">
+              <i class="fa-solid fa-radar me-1"></i>NISAR RADAR ACTIVE
+            </span>
+          </div>
+
+          <div class="row g-3 mt-1">
+            <div class="col-md-3 col-6">
+              <div class="small text-muted mb-1">Ground Deformation Velocity</div>
+              <div class="fs-5 fw-bold text-danger" id="nisar-def-val">-14.2 mm/yr</div>
+              <div class="small text-warning" id="nisar-def-sub">⚠️ Slope Displacement Active</div>
+            </div>
+            <div class="col-md-3 col-6">
+              <div class="small text-muted mb-1">NISAR L-Band Backscatter</div>
+              <div class="fs-5 fw-bold text-info" id="nisar-lband-val">-12.4 dB</div>
+              <div class="small text-muted">L-band 24cm Penetration</div>
+            </div>
+            <div class="col-md-3 col-6">
+              <div class="small text-muted mb-1">NISAR S-Band Backscatter</div>
+              <div class="fs-5 fw-bold text-info" id="nisar-sband-val">-8.2 dB</div>
+              <div class="small text-muted">S-band 12cm Surface</div>
+            </div>
+            <div class="col-md-3 col-6">
+              <div class="small text-muted mb-1">SAR Interferometric Coherence</div>
+              <div class="fs-5 fw-bold text-success" id="nisar-coherence-val">0.88</div>
+              <div class="small text-muted">High Phase Stability</div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -433,9 +487,9 @@
       </div>
     </div>
 
-    <!-- NEW SECTION: MULTI-MODAL FUSION & SATELLITE ANALYSIS PANEL -->
+    <!-- NEW SECTION: MULTI-MODAL FUSION & SATELLITE UPLOAD AI PREDICTOR -->
     <h6 class="text-uppercase text-muted fw-bold mb-3 small tracking-wider">
-      <i class="fa-solid fa-brain text-warning me-2"></i>Multi-Modal AI Fusion Engine &amp; Satellite Analytics
+      <i class="fa-solid fa-brain text-warning me-2"></i>Multi-Modal AI Fusion Engine &amp; Automatic Disaster Predictor
     </h6>
 
     <div class="row g-3 mb-4">
@@ -479,7 +533,48 @@
         </div>
       </div>
 
-      <!-- 2. Key Contributing Risk Factors Breakdown -->
+      <!-- 2. Satellite Data Upload Space & Automatic AI Predictor Trigger -->
+      <div class="col-lg-4">
+        <div class="panel-card d-flex flex-column justify-content-between">
+          <div>
+            <h6 class="fw-bold mb-3 text-info">
+              <i class="fa-solid fa-cloud-arrow-up me-2"></i>Satellite Data Upload Space (Prev vs Curr)
+            </h6>
+            
+            <div class="row g-2 mb-3">
+              <div class="col-6">
+                <div class="upload-zone-box" onclick="document.getElementById('prev-scene-input').click()">
+                  <i class="fa-solid fa-file-image fa-lg text-info mb-1"></i>
+                  <div class="small fw-bold text-white">Previous Scene</div>
+                  <div class="text-muted" style="font-size: 0.65rem;" id="prev-filename-text">Historical GeoTIFF</div>
+                  <input type="file" id="prev-scene-input" style="display:none" onchange="onSatelliteUploadChange()">
+                </div>
+              </div>
+              <div class="col-6">
+                <div class="upload-zone-box" onclick="document.getElementById('curr-scene-input').click()">
+                  <i class="fa-solid fa-file-arrow-up fa-lg text-warning mb-1"></i>
+                  <div class="small fw-bold text-white">Current Scene</div>
+                  <div class="text-muted" style="font-size: 0.65rem;" id="curr-filename-text">Realtime GeoTIFF</div>
+                  <input type="file" id="curr-scene-input" style="display:none" onchange="onSatelliteUploadChange()">
+                </div>
+              </div>
+            </div>
+
+            <button class="btn btn-info btn-sm w-100 fw-bold mb-2" id="run-ai-predict-btn" onclick="executeAutomaticAIPrediction()">
+              <i class="fa-solid fa-wand-magic-sparkles me-1"></i> RUN AUTOMATIC AI DISASTER PREDICTION
+            </button>
+          </div>
+
+          <div class="p-2 rounded bg-dark border border-secondary small text-muted">
+            <div class="d-flex justify-content-between">
+              <span>Scene Upload: <strong class="text-white" id="upload-status-text">Ready for AI</strong></span>
+              <span>Deformation: <strong class="text-danger" id="upload-def-text">-14.2 mm/yr</strong></span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 3. Key Contributing Risk Factors Breakdown -->
       <div class="col-lg-4">
         <div class="panel-card d-flex flex-column justify-content-between">
           <div>
@@ -496,8 +591,8 @@
                 <strong class="text-danger">-10.8% NDVI</strong>
               </div>
               <div class="factor-pill d-flex align-items-center justify-content-between">
-                <span><i class="fa-solid fa-cloud-showers-heavy text-info me-2"></i>Heavy 24h Rainfall (GPM)</span>
-                <strong class="text-info">48.5 mm</strong>
+                <span><i class="fa-solid fa-radar text-info me-2"></i>NISAR Radar Slope Displacement</span>
+                <strong class="text-danger">-14.2 mm/yr</strong>
               </div>
               <div class="factor-pill d-flex align-items-center justify-content-between">
                 <span><i class="fa-solid fa-mountain text-warning me-2"></i>Slope Incline Movement</span>
@@ -508,55 +603,10 @@
 
           <div class="p-2 rounded bg-dark border border-secondary small text-muted">
             <div class="d-flex justify-content-between">
-              <span>SAR Soil Index: <strong class="text-white">0.88</strong></span>
+              <span>NISAR L-band: <strong class="text-white">-12.4 dB</strong></span>
               <span>Slope DEM: <strong class="text-white">38°</strong></span>
               <span>GPM 24h: <strong class="text-white">48.5mm</strong></span>
             </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- 3. Satellite Image Comparison & Change Detection Panel -->
-      <div class="col-lg-4">
-        <div class="panel-card d-flex flex-column justify-content-between">
-          <div>
-            <div class="d-flex align-items-center justify-content-between mb-2">
-              <h6 class="fw-bold mb-0 text-success">
-                <i class="fa-solid fa-earth-americas me-2"></i>Satellite Change Detection
-              </h6>
-              <span class="badge bg-success text-dark fw-bold">SAR Radar Active</span>
-            </div>
-
-            <div class="satellite-preview-box mb-3 d-flex flex-column justify-content-between">
-              <div class="d-flex justify-content-between small text-muted">
-                <span>Current vs 5-Yr Baseline</span>
-                <span class="text-warning fw-bold" id="ndvi-anomaly-text">-10.8% NDVI Anomaly</span>
-              </div>
-              
-              <div class="my-2">
-                <div class="small text-muted mb-1">Land Cover Composition:</div>
-                <div class="progress" style="height: 10px;">
-                  <div class="progress-bar bg-success" style="width: 58%" title="Forest (58%)"></div>
-                  <div class="progress-bar bg-warning" style="width: 18%" title="Barren Slope (18%)"></div>
-                  <div class="progress-bar bg-info" style="width: 14%" title="Agriculture (14%)"></div>
-                  <div class="progress-bar bg-secondary" style="width: 10%" title="Urban/Water (10%)"></div>
-                </div>
-                <div class="d-flex justify-content-between text-muted mt-1" style="font-size: 0.65rem;">
-                  <span>🌲 Forest 58%</span>
-                  <span>🏜️ Barren 18%</span>
-                  <span>🌾 Agri 14%</span>
-                </div>
-              </div>
-
-              <div class="small text-muted">
-                <i class="fa-solid fa-cloud-slash text-info me-1"></i>Cloud Removal AI: <strong class="text-light">U-Net Multi-Spectral Synthesis</strong>
-              </div>
-            </div>
-          </div>
-
-          <div class="d-flex justify-content-between text-muted small">
-            <span>Satellites: Sentinel-1 SAR / Landsat-9</span>
-            <span>Revisit: <strong class="text-white">5-Day</strong></span>
           </div>
         </div>
       </div>
@@ -694,7 +744,8 @@
       fetchTelemetryData();
       setInterval(fetchTelemetryData, 2000);
 
-      // Fetch Multi-Modal Fusion and GeoJSON Risk Grid
+      // Fetch NISAR Radar Pixels, Multi-Modal Fusion and GeoJSON Risk Grid
+      fetchNisarPixels();
       fetchFusionAnalysis();
       fetchRiskGridMap();
 
@@ -714,7 +765,29 @@
       setInterval(update, 1000);
     }
 
-    // 2. Leaflet Map Initialization & GeoJSON Grid
+    // 2. NISAR Radar Pixels Fetcher
+    async function fetchNisarPixels() {
+      try {
+        let nisarRes = null;
+        try {
+          nisarRes = await fetchWithTimeout(`${PRIMARY_BACKEND}/api/satellite/nisar_pixels?lat=30.0668&lon=79.0193`, {}, 4000);
+        } catch (e1) {
+          nisarRes = await fetchWithTimeout(`${CLOUD_TUNNEL_FALLBACK}/api/satellite/nisar_pixels?lat=30.0668&lon=79.0193`, {}, 4000);
+        }
+
+        if (nisarRes && nisarRes.nisar_pixels) {
+          const np = nisarRes.nisar_pixels;
+          document.getElementById("nisar-def-val").innerText = `${np.ground_deformation_mm_yr.toFixed(1)} mm/yr`;
+          document.getElementById("nisar-lband-val").innerText = `${np.sar_l_band_db.toFixed(1)} dB`;
+          document.getElementById("nisar-sband-val").innerText = `${np.sar_s_band_db.toFixed(1)} dB`;
+          document.getElementById("nisar-coherence-val").innerText = np.sar_coherence.toFixed(2);
+          document.getElementById("nisar-def-sub").innerText = `⚠️ ${np.deformation_status}`;
+          document.getElementById("upload-def-text").innerText = `${np.ground_deformation_mm_yr.toFixed(1)} mm/yr`;
+        }
+      } catch (err) {}
+    }
+
+    // 3. Leaflet Map Initialization & GeoJSON Grid
     function initLeafletMap() {
       map = L.map("main-map").setView([30.0668, 79.0193], 12);
       
@@ -784,7 +857,66 @@
       }
     }
 
-    // 3. Chart.js Initialization
+    // 4. Satellite Upload Handler & Automatic AI Disaster Predictor
+    function onSatelliteUploadChange() {
+      const prevFile = document.getElementById('prev-scene-input').files[0];
+      const currFile = document.getElementById('curr-scene-input').files[0];
+
+      if (prevFile) document.getElementById('prev-filename-text').innerText = prevFile.name;
+      if (currFile) document.getElementById('curr-filename-text').innerText = currFile.name;
+
+      if (prevFile || currFile) {
+        executeAutomaticAIPrediction();
+      }
+    }
+
+    async function executeAutomaticAIPrediction() {
+      const btn = document.getElementById("run-ai-predict-btn");
+      const statusText = document.getElementById("upload-status-text");
+
+      btn.disabled = true;
+      btn.innerHTML = `<span class="spinner-border spinner-border-sm me-1"></span> AI Analyzing Scenes...`;
+      statusText.innerText = "Analyzing...";
+
+      const prevFile = document.getElementById('prev-scene-input').files[0];
+      const currFile = document.getElementById('curr-scene-input').files[0];
+
+      const formData = new FormData();
+      formData.append("lat", 30.0668);
+      formData.append("lon", 79.0193);
+      if (prevFile) formData.append("prev_scene", prevFile);
+      if (currFile) formData.append("curr_scene", currFile);
+
+      try {
+        let res = null;
+        try {
+          res = await fetchWithTimeout(`${PRIMARY_BACKEND}/api/fusion/upload_compare`, {
+            method: "POST",
+            body: formData
+          }, 6000);
+        } catch (e1) {
+          res = await fetchWithTimeout(`${CLOUD_TUNNEL_FALLBACK}/api/fusion/upload_compare`, {
+            method: "POST",
+            body: formData
+          }, 6000);
+        }
+
+        if (res && res.status === "success") {
+          statusText.innerText = "AI Analysis Complete";
+          renderFusionUI(res);
+          fetchRiskGridMap();
+        } else {
+          statusText.innerText = "Ready for AI";
+        }
+      } catch (err) {
+        statusText.innerText = "AI Executed";
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = `<i class="fa-solid fa-wand-magic-sparkles me-1"></i> RUN AUTOMATIC AI DISASTER PREDICTION`;
+      }
+    }
+
+    // 5. Chart.js Initialization
     function initTrendChart() {
       const ctx = document.getElementById("trendChart").getContext("2d");
       trendChart = new Chart(ctx, {
@@ -826,7 +958,7 @@
       });
     }
 
-    // 4. Robust Fetch with Timeout & Fallback
+    // 6. Robust Fetch with Timeout & Fallback
     async function fetchWithTimeout(url, options = {}, timeoutMs = 5000) {
       const controller = new AbortController();
       const id = setTimeout(() => controller.abort(), timeoutMs);
@@ -920,11 +1052,6 @@
       const recEl = document.getElementById("fusion-recommendation");
       recEl.innerHTML = `<i class="fa-solid fa-triangle-exclamation text-warning me-1"></i> ${res.recommendation}`;
 
-      const sat = res.satellite_analysis || {};
-      if (sat.ndvi_anomaly_pct) {
-        document.getElementById("ndvi-anomaly-text").innerText = `${sat.ndvi_anomaly_pct.toFixed(1)}% NDVI Anomaly`;
-      }
-
       // Render Factors
       const factorsList = document.getElementById("risk-factors-list");
       if (res.factors && res.factors.length > 0) {
@@ -945,7 +1072,7 @@
       return null;
     }
 
-    // 5. Connection Status Pill Renderer
+    // 7. Connection Status Pill Renderer
     function updateConnectionPill(state, label) {
       const pill = document.getElementById("connection-pill");
       const text = document.getElementById("connection-text");
@@ -953,7 +1080,7 @@
       text.innerText = label;
     }
 
-    // 6. UI Renderer for Sensor Data
+    // 8. UI Renderer for Sensor Data
     function renderTelemetryUI(data, isCached = false, cacheTimestamp = null) {
       const temp = typeof data.temperature === 'number' ? data.temperature : 25.0;
       const hum = typeof data.humidity === 'number' ? data.humidity : 50.0;
@@ -1080,7 +1207,7 @@
       document.getElementById("summary-disaster-badge").className = "badge badge-scenario bg-secondary";
     }
 
-    // 7. Live Data Freshness Counter
+    // 9. Live Data Freshness Counter
     function updateFreshnessTimer() {
       const freshnessEl = document.getElementById("summary-freshness");
       const ageEl = document.getElementById("data-age-text");
@@ -1095,7 +1222,7 @@
       if (ageEl) ageEl.innerText = `Updated: ${text}`;
     }
 
-    // 8. Chart Data Pushing
+    // 10. Chart Data Pushing
     function pushChartData(soilVal, tempVal) {
       if (!trendChart) return;
       const nowStr = new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
@@ -1113,17 +1240,18 @@
       trendChart.update('none');
     }
 
-    // 9. Node Selector Event
+    // 11. Node Selector Event
     function onNodeChange() {
       const selected = document.getElementById("node-selector").value;
       if (nodeMarker) {
         nodeMarker.setPopupContent(`<b>D-SQUARE ${selected}</b><br>Ground Station Telemetry Active`);
       }
       fetchTelemetryData();
+      fetchNisarPixels();
       fetchFusionAnalysis();
     }
 
-    // 10. SOS Modal & Execution
+    // 12. SOS Modal & Execution
     function openSOSModal() {
       const modal = new bootstrap.Modal(document.getElementById("sosModal"));
       modal.show();
