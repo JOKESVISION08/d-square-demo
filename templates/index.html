@@ -349,7 +349,7 @@
     <div class="row g-3 mb-4">
       <!-- NISAR Dual-SAR Radar Telemetry -->
       <div class="col-lg-7">
-        <div class="panel-card p-3 h-100" style="background: linear-gradient(135deg, #111c38, #172a46); border: 1px solid #38bdf8;">
+        <div class="panel-card p-3 h-100" style="background: linear-gradient(135deg, #111c38, #172a46); border: 1.5px solid #38bdf8; box-shadow: 0 0 15px rgba(56, 189, 248, 0.25);">
           <div class="d-flex align-items-center justify-content-between mb-2">
             <div class="d-flex align-items-center gap-2">
               <i class="fa-solid fa-satellite fa-xl text-info"></i>
@@ -362,24 +362,24 @@
 
           <div class="row g-3 mt-1">
             <div class="col-6">
-              <div class="small text-muted mb-1">Ground Deformation Velocity</div>
+              <div class="small fw-semibold text-white mb-1" style="color: #f1f5f9; font-weight: 600; font-size: 0.88rem;">Ground Deformation Velocity</div>
               <div class="fs-5 fw-bold text-danger" id="nisar-def-val">-14.2 mm/yr</div>
-              <div class="small text-warning" id="nisar-def-sub">⚠️ Slope Displacement Active</div>
+              <div class="small fw-semibold text-warning" id="nisar-def-sub">⚠️ Slope Displacement Active</div>
             </div>
             <div class="col-6">
-              <div class="small text-muted mb-1">NISAR L-Band Backscatter</div>
+              <div class="small fw-semibold text-white mb-1" style="color: #f1f5f9; font-weight: 600; font-size: 0.88rem;">NISAR L-Band Backscatter</div>
               <div class="fs-5 fw-bold text-info" id="nisar-lband-val">-12.4 dB</div>
-              <div class="small text-muted">L-band 24cm Penetration</div>
+              <div class="small text-slate-300" style="color: #cbd5e1; font-weight: 500;">L-band 24cm Penetration</div>
             </div>
             <div class="col-6">
-              <div class="small text-muted mb-1">NISAR S-Band Backscatter</div>
+              <div class="small fw-semibold text-white mb-1" style="color: #f1f5f9; font-weight: 600; font-size: 0.88rem;">NISAR S-Band Backscatter</div>
               <div class="fs-5 fw-bold text-info" id="nisar-sband-val">-8.2 dB</div>
-              <div class="small text-muted">S-band 12cm Surface</div>
+              <div class="small text-slate-300" style="color: #cbd5e1; font-weight: 500;">S-band 12cm Surface</div>
             </div>
             <div class="col-6">
-              <div class="small text-muted mb-1">SAR Interferometric Coherence</div>
+              <div class="small fw-semibold text-white mb-1" style="color: #f1f5f9; font-weight: 600; font-size: 0.88rem;">SAR Interferometric Coherence</div>
               <div class="fs-5 fw-bold text-success" id="nisar-coherence-val">0.88</div>
-              <div class="small text-muted">High Phase Stability</div>
+              <div class="small text-slate-300" style="color: #cbd5e1; font-weight: 500;">High Phase Stability</div>
             </div>
           </div>
         </div>
@@ -387,11 +387,11 @@
 
       <!-- NISAR Live Mobile Camera Stream Feed -->
       <div class="col-lg-5">
-        <div class="panel-card p-3 h-100" style="background: rgba(15, 23, 42, 0.9); border: 1px solid #38bdf8;">
+        <div class="panel-card p-3 h-100" style="background: rgba(15, 23, 42, 0.95); border: 1.5px solid #38bdf8;">
           <div class="d-flex align-items-center justify-content-between mb-2">
             <div class="d-flex align-items-center gap-2">
               <i class="fa-solid fa-video text-info"></i>
-              <h6 class="fw-bold mb-0 text-white">Live NISAR Mobile Camera Feed</h6>
+              <h6 class="fw-bold mb-0 text-white">Live NISAR Mobile Camera & Pixel Stream</h6>
             </div>
             <span class="badge bg-secondary text-light fw-bold" id="nisar-cam-status-badge">
               <i class="fa-solid fa-circle me-1"></i> STANDBY
@@ -399,25 +399,25 @@
           </div>
           
           <!-- Viewfinder container -->
-          <div style="position: relative; width: 100%; height: 110px; border-radius: 8px; overflow: hidden; border: 1px solid #38bdf8; background: #000;" class="d-flex align-items-center justify-content-center">
-            <img id="dashboard-nisar-cam-feed" style="width: 100%; height: 100%; object-fit: cover; display: none;" alt="Live NISAR Camera Stream">
+          <div style="position: relative; width: 100%; height: 180px; min-height: 160px; border-radius: 8px; overflow: hidden; border: 1.5px solid #38bdf8; background: #000;" class="d-flex align-items-center justify-content-center">
+            <img id="dashboard-nisar-cam-feed" style="width: 100%; height: 100%; object-fit: contain; display: none;" alt="Live NISAR Camera Stream">
             
-            <div id="dashboard-nisar-cam-placeholder" class="text-center p-2 text-muted">
-              <i class="fa-solid fa-camera text-info fa-lg mb-1 opacity-75"></i>
-              <div class="small fw-semibold text-white">Mobile NISAR Camera Node Ready</div>
-              <div class="small text-muted" style="font-size: 0.75rem;">Connected to Mobile Sensing Camera</div>
+            <div id="dashboard-nisar-cam-placeholder" class="text-center p-3 text-white">
+              <i class="fa-solid fa-camera text-info fa-2xl mb-2"></i>
+              <div class="fw-bold text-white fs-6">Mobile NISAR Camera Node Ready</div>
+              <div class="small text-slate-300" style="color: #cbd5e1;">Connected to Mobile Sensing Camera & Satellite Pixels</div>
             </div>
 
             <!-- Radar Scan Overlay -->
-            <div style="position: absolute; top:0; left:0; right:0; bottom:0; pointer-events:none; border: 1px dashed rgba(56,189,248,0.3);">
-              <div style="position: absolute; width:100%; height:2px; background: linear-gradient(90deg, transparent, #38bdf8, #22c55e, transparent); animation: nisarScan 2s linear infinite;"></div>
+            <div style="position: absolute; top:0; left:0; right:0; bottom:0; pointer-events:none; border: 1px dashed rgba(56,189,248,0.5);">
+              <div style="position: absolute; width:100%; height:3px; background: linear-gradient(90deg, transparent, #38bdf8, #22c55e, transparent); animation: nisarScan 2s linear infinite;"></div>
             </div>
           </div>
 
           <div class="d-flex justify-content-between align-items-center mt-2">
-            <span class="small text-muted" id="nisar-cam-fps-text">Stream: Standby</span>
-            <a href="mobile_camera.html" target="_blank" class="btn btn-outline-info btn-sm py-0 px-2 fw-semibold">
-              <i class="fa-solid fa-camera me-1"></i> Open NISAR Camera
+            <span class="small text-slate-300" style="color: #cbd5e1; font-weight: 500;" id="nisar-cam-fps-text">Stream: Standby</span>
+            <a href="mobile_camera.html" target="_blank" class="btn btn-outline-info btn-sm py-1 px-3 fw-bold">
+              <i class="fa-solid fa-camera me-1"></i> Open Mobile NISAR Camera
             </a>
           </div>
         </div>

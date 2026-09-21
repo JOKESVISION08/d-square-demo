@@ -425,12 +425,23 @@ class MultiModalFusionEngineService:
         extracts spectral change & ground deformation metrics, and executes
         automatic AI Disaster Risk Prediction via decision-level fusion.
         """
+        from services.multi_parameter_detection import MultiParameterFusionEngine
+
         nisar = self.sat_fetcher.get_nisar_radar_pixels(lat, lon)
         
         # Execute decision-level fusion analysis
         fusion = self.analyze_fusion(lat=lat, lon=lon, iot_data=iot_data)
 
+        # Build parameter dictionaries for multi-parameter detection
+        iot = iot_data or {"soil_moisture": 88.0, "temperature": 26.5, "tilt": 1, "vibration": 1, "water_level": 2.5}
+        sat = {"ndwi": 0.65, "water_body_expansion": 35.0, "sar_backscatter_db": nisar.get("sar_l_band_db", -12.4)}
+        wx = {"rain_24h": 150.0, "humidity": 88.0}
+        ai = {"flood_probability": 85.0, "landslide_probability": 88.0}
+
+        multi_param_res = MultiParameterFusionEngine.analyze_all_disasters(iot, sat, wx, ai)
+
         # Attach NISAR SAR & Uploaded scene comparison results
+        fusion["multi_parameter_detection"] = multi_param_res
         fusion["uploaded_comparison"] = {
             "prev_filename": prev_filename,
             "curr_filename": curr_filename,
