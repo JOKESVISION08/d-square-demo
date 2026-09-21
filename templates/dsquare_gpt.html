@@ -240,15 +240,17 @@
       fetch("/api/sos/active_parallel_alerts")
         .then((res) => res.json())
         .then((data) => {
+          const container = document.getElementById("pc-alert-banner-container");
           if (data.status === "success" && data.count > 0) {
             const alert = data.alerts[0];
             const pub = alert.public_payload || {};
             const loc = pub.location || {};
-            const container = document.getElementById("pc-alert-banner-container");
-            container.style.display = "block";
+            if (container) container.style.display = "block";
             document.getElementById("pc-alert-text").innerHTML = `
-              <strong>[${alert.disaster_type} ${alert.severity}]</strong> ${loc.area_name || "Mumbai Coastal Zone"}: ${pub.message || "Evacuate immediately!"}
+              <strong>[${alert.disaster_type} ${alert.severity}]</strong> ${loc.area_name || "Disaster Zone"}: ${pub.message || "Hazard alert active!"}
             `;
+          } else {
+            if (container) container.style.display = "none";
           }
         })
         .catch((err) => console.log("Alert listener polling:", err));

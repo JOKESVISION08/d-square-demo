@@ -48,7 +48,7 @@ SECRET_KEY = "DSQUARE_PRODUCTION_JWT_SECRET_2026"
 from database import (
     init_db, save_sensor_log, get_historical_sensor_logs, get_active_nodes,
     save_sos_request, get_db_connection, save_parallel_sos_alert,
-    get_active_parallel_alerts, get_shelters_list, get_rescue_resources_list
+    get_active_parallel_alerts, clear_all_parallel_sos_alerts, get_shelters_list, get_rescue_resources_list
 )
 from satellite.bhuvan_api import bhuvan_api
 from satellite.cloud_removal_ai import cloud_removal_model
@@ -104,6 +104,7 @@ latest_mobile_alert = {
 }
 
 last_sos_time_by_session = {}
+last_auto_sos_time = 0
 
 def save_alert_state():
     try:
@@ -202,7 +203,7 @@ def auth_login():
 @app.route("/api/sensor_data", methods=["POST"])
 @app.route("/alert", methods=["POST"])
 def post_sensor_data():
-    global latest_sensor_data, latest_mobile_alert
+    global latest_sensor_data, latest_mobile_alert, last_auto_sos_time
     body = request.get_json(silent=True) or request.form.to_dict() or {}
     
     node_id = body.get("node_id", "D-SQUARE_NODE_01")
@@ -219,18 +220,11 @@ def post_sensor_data():
     else:
         soil_m = 88.0 if soil_raw < 800 else 42.0
 
-    scenario = body.get("scenario")
-    if not scenario:
-        if flame == 1:
-            scenario = "fire"
-        elif soil_raw < 800 or soil_m >= 80.0 or tilt == 1:
-            scenario = "landslide"
-        else:
-            scenario = "normal"
+    # Physical sensor threshold verification (prevents pin noise or stale scenario strings from sending dummy alerts)
+    is_fire = (flame == 1) or (mq2 == 1 and temp > 45.0)
+    is_landslide = (soil_raw < 800) or (soil_m >= 80.0)
 
-    is_landslide = (scenario == "landslide" or soil_raw < 800 or soil_m >= 80.0)
-    is_fire = (scenario == "fire" or flame == 1)
-
+    scenario = "fire" if is_fire else ("landslide" if is_landslide else "normal")
     now_iso = datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ")
 
     latest_sensor_data = {
@@ -266,6 +260,23 @@ def post_sensor_data():
             "timestamp": now_iso,
             "message": f"🚨 CRITICAL RISK: {(scenario).upper()} detected by hardware node!"
         }
+        # Apply a 30s cooldown for auto-telemetry SOS dispatches to prevent database flooding
+        now_ts = time.time()
+        if now_ts - last_auto_sos_time > 30:
+            last_auto_sos_time = now_ts
+            try:
+                dispatch_res = parallel_sos_engine.dispatch_parallel_sos({
+                    "disaster_type": "FIRE" if is_fire else "LANDSLIDE",
+                    "severity": "CRITICAL",
+                    "latitude": 30.0668,
+                    "longitude": 79.0193,
+                    "area_name": f"Ground Station Sector ({node_id})",
+                    "affected_population": 8500,
+                    "source": "VERIFIED_HARDWARE_SENSOR"
+                })
+                save_parallel_sos_alert(dispatch_res)
+            except Exception:
+                pass
     else:
         latest_mobile_alert = {
             "active": False,
@@ -277,7 +288,6 @@ def post_sensor_data():
         }
 
     save_alert_state()
-
     return jsonify({
         "status": "success",
         "alert_recorded": is_landslide or is_fire,

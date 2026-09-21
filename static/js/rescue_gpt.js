@@ -21,15 +21,20 @@ function checkActiveRescueSOSAlert() {
   fetch("/api/sos/active_parallel_alerts")
     .then((res) => res.json())
     .then((data) => {
+      let alertBadge = document.getElementById("data-mode-badge");
       if (data.status === "success" && data.count > 0) {
         const alert = data.alerts[0];
         const rescue = alert.rescue_payload || {};
         const loc = rescue.location || {};
         
-        let alertBadge = document.getElementById("data-mode-badge");
         if (alertBadge) {
           alertBadge.className = "badge bg-danger px-3 py-2 fw-bold";
           alertBadge.innerHTML = `<i class="fa-solid fa-triangle-exclamation me-1"></i> ACTIVE PARALLEL SOS: ${alert.disaster_type} (${alert.severity})`;
+        }
+      } else {
+        if (alertBadge) {
+          alertBadge.className = "badge bg-success px-3 py-2 fw-bold";
+          alertBadge.innerHTML = `<i class="fa-solid fa-signal me-1"></i> RESCUE OPS ONLINE`;
         }
       }
     })

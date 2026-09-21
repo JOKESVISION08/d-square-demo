@@ -382,6 +382,15 @@ def save_parallel_sos_alert(alert_res: Dict[str, Any]) -> int:
     return alert_id
 
 
+def clear_all_parallel_sos_alerts():
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM parallel_sos_alerts")
+    cursor.execute("DELETE FROM alerts")
+    conn.commit()
+    conn.close()
+
+
 def get_active_parallel_alerts(limit: int = 10) -> List[Dict[str, Any]]:
     conn = get_db_connection()
     cursor = conn.cursor()
