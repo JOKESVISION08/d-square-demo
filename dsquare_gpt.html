@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>D-SQUARE GPT - Weather Conversational AI & PC Alert Integrator</title>
+
+  <!-- Google Fonts & FontAwesome -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Poppins:wght@600;700;800&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+  <style>
+    :root {
+      --bg-dark: #0b1329;
+      --card-bg: #111c38;
+      --card-border: #1e3a5f;
+      --accent-blue: #38bdf8;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+    }
+    body {
+      background-color: var(--bg-dark);
+      color: var(--text-main);
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      min-height: 100vh;
+    }
+    h1, h2, h3, h4, h5, h6, .navbar-brand { font-family: 'Poppins', sans-serif; }
+    .gpt-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      padding: 18px;
+      margin-bottom: 18px;
+    }
+    .chat-container {
+      height: 420px;
+      overflow-y: auto;
+      background: #070d1e;
+      border-radius: 8px;
+      padding: 14px;
+      border: 1px solid var(--card-border);
+    }
+    .chat-bubble-user {
+      background: #1e3a5f;
+      color: #fff;
+      padding: 10px 14px;
+      border-radius: 14px 14px 2px 14px;
+      margin-bottom: 10px;
+      max-width: 80%;
+      margin-left: auto;
+      font-size: 0.95rem;
+    }
+    .chat-bubble-ai {
+      background: #0f2b48;
+      color: #38bdf8;
+      border: 1px solid #0284c7;
+      padding: 12px 16px;
+      border-radius: 14px 14px 14px 2px;
+      margin-bottom: 10px;
+      max-width: 88%;
+      white-space: pre-line;
+      font-size: 0.95rem;
+    }
+    .prompt-pill {
+      background: rgba(30, 58, 95, 0.6);
+      border: 1px solid #38bdf8;
+      color: #e2e8f0;
+      border-radius: 20px;
+      padding: 6px 14px;
+      font-size: 0.8rem;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .prompt-pill:hover {
+      background: #0284c7;
+      color: #fff;
+    }
+    .pc-alert-banner {
+      background: linear-gradient(135deg, rgba(239, 68, 68, 0.9), rgba(185, 28, 28, 0.9));
+      border: 2px solid #f87171;
+      border-radius: 10px;
+      padding: 14px 20px;
+      color: white;
+      box-shadow: 0 0 15px rgba(239, 68, 68, 0.5);
+      animation: banner-pulse 2s infinite alternate;
+    }
+    @keyframes banner-pulse {
+      0% { box-shadow: 0 0 10px rgba(239, 68, 68, 0.4); }
+      100% { box-shadow: 0 0 25px rgba(239, 68, 68, 0.8); }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Navigation Header -->
+  <nav class="navbar navbar-dark bg-dark border-bottom border-secondary px-4 py-2">
+    <div class="container-fluid">
+      <a class="navbar-brand fw-bold text-info fs-5 d-flex align-items-center" href="/dsquare_gpt">
+        <i class="fa-solid fa-cloud-sun-rain me-2 text-warning fs-4"></i>
+        <span>D-SQUARE GPT | Weather Conversational AI</span>
+      </a>
+      <div class="d-flex align-items-center gap-2">
+        <a href="/" class="btn btn-outline-info btn-sm"><i class="fa-solid fa-gauge me-1"></i> Dashboard</a>
+        <a href="/pc_sos_alert" class="btn btn-outline-danger btn-sm fw-bold"><i class="fa-solid fa-tower-broadcast me-1"></i> PC SOS Alert Center</a>
+        <a href="/rescue_gpt" class="btn btn-outline-warning btn-sm"><i class="fa-solid fa-user-shield me-1"></i> Rescue GPT</a>
+        <span class="badge bg-danger px-3 py-2 fw-bold" id="alert-listener-badge"><i class="fa-solid fa-bell me-1"></i> PC ALERT LISTENER LIVE</span>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container-fluid px-4 py-3">
+
+    <!-- Live PC SOS Alert Banner Container (Populated dynamically) -->
+    <div id="pc-alert-banner-container" class="mb-3" style="display: none;">
+      <div class="pc-alert-banner d-flex justify-content-between align-items-center">
+        <div>
+          <div class="fw-bold fs-6 mb-1"><i class="fa-solid fa-triangle-exclamation me-2"></i>🚨 LIVE PC SOS ALERT RECEIVED FROM CONTROL CENTER</div>
+          <div id="pc-alert-text" class="small">Fetching alert details...</div>
+        </div>
+        <div>
+          <a href="tel:112" class="btn btn-light text-danger fw-bold btn-sm"><i class="fa-solid fa-phone me-1"></i> CALL 112</a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main Content Grid -->
+    <div class="row g-3">
+
+      <!-- Left Column: Conversational AI Chat -->
+      <div class="col-lg-7 col-md-12">
+        <div class="gpt-card h-100 d-flex flex-column justify-content-between mb-0">
+          <div>
+            <div class="d-flex justify-content-between align-items-center mb-3">
+              <h6 class="fw-bold text-info mb-0"><i class="fa-solid fa-comments me-2"></i>Weather & Satellite AI Conversational Assistant</h6>
+              <button class="btn btn-sm btn-outline-light" onclick="toggleSpeech()"><i class="fa-solid fa-volume-high me-1"></i> Speech: <span id="speech-status">ON</span></button>
+            </div>
+
+            <!-- Quick Suggestion Pills -->
+            <div class="d-flex gap-2 mb-3 flex-wrap">
+              <span class="prompt-pill" onclick="sendQuickQuery('What is the instant weather update?')">🌤️ Instant Weather</span>
+              <span class="prompt-pill" onclick="sendQuickQuery('Show satellite pixel information')">📡 Satellite Pixels Data</span>
+              <span class="prompt-pill" onclick="sendQuickQuery('What was the previous weather data?')">📊 Previous 24h Trends</span>
+              <span class="prompt-pill" onclick="sendQuickQuery('Check active PC SOS Alert status')">🚨 PC SOS Alert Status</span>
+            </div>
+
+            <!-- Chat Box -->
+            <div class="chat-container mb-3" id="chat-box">
+              <div class="chat-bubble-ai">
+                👋 Hello! I am <strong>D-SQUARE GPT</strong>, your AI Weather Conversational Assistant.
+                Ask me about <strong>instant weather updates</strong>, <strong>NISAR satellite pixel data</strong>, <strong>previous weather history</strong>, or <strong>PC SOS Alerts</strong>!
+              </div>
+            </div>
+          </div>
+
+          <!-- Input Bar -->
+          <div class="input-group mt-2">
+            <button class="btn btn-secondary" onclick="startMicRecognition()" title="Voice Input"><i class="fa-solid fa-microphone text-warning"></i></button>
+            <input type="text" class="form-control bg-dark text-white border-secondary" id="user-input" placeholder="Ask about weather, satellite pixels, or alerts..." onkeypress="if(event.key==='Enter') sendQuery()">
+            <button class="btn btn-info fw-bold" onclick="sendQuery()"><i class="fa-solid fa-paper-plane me-1"></i> Ask AI</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right Column: Weather & Satellite Telemetry Widgets -->
+      <div class="col-lg-5 col-md-12">
+
+        <!-- Instant Weather Widget -->
+        <div class="gpt-card mb-3">
+          <h6 class="fw-bold text-warning mb-2"><i class="fa-solid fa-cloud-sun me-2"></i>Instant Weather Telemetry</h6>
+          <div class="row g-2 text-center small">
+            <div class="col-4">
+              <div class="text-muted">Temperature</div>
+              <strong class="text-white fs-6" id="w-temp">28.5°C</strong>
+            </div>
+            <div class="col-4">
+              <div class="text-muted">Rainfall Rate</div>
+              <strong class="text-danger fs-6" id="w-rain">94.5 mm/h</strong>
+            </div>
+            <div class="col-4">
+              <div class="text-muted">Humidity</div>
+              <strong class="text-info fs-6" id="w-humidity">72%</strong>
+            </div>
+          </div>
+        </div>
+
+        <!-- Satellite Pixels Widget -->
+        <div class="gpt-card mb-3">
+          <h6 class="fw-bold text-info mb-2"><i class="fa-solid fa-satellite me-2"></i>Satellite Pixels Analysis (NISAR Dual SAR)</h6>
+          <div class="row g-2 text-center small mb-2">
+            <div class="col-6">
+              <div class="text-muted">Scanned Pixels</div>
+              <strong class="text-white" id="sat-scanned">49 Grid Tiles</strong>
+            </div>
+            <div class="col-6">
+              <div class="text-muted">High-Risk Active Pixels</div>
+              <strong class="text-danger" id="sat-active">14 Pixels (Red)</strong>
+            </div>
+          </div>
+          <div class="p-2 bg-dark rounded border border-secondary small">
+            <div><b>NDWI Inundation:</b> <span class="text-warning">88.4% (+39.1% Anomaly)</span></div>
+            <div><b>Radar Backscatter:</b> <span class="text-info">-14.2 dB (Specular Water)</span></div>
+          </div>
+        </div>
+
+        <!-- Previous Weather History Widget -->
+        <div class="gpt-card mb-0">
+          <h6 class="fw-bold text-success mb-2"><i class="fa-solid fa-chart-line me-2"></i>Previous 24h Weather Data</h6>
+          <div class="small">
+            <div><b>Past 24h Total Rain:</b> <span class="text-warning" id="prev-rain">168.4 mm</span></div>
+            <div><b>Temp Range:</b> <span class="text-white" id="prev-temp">24.1°C - 31.8°C</span></div>
+            <div class="text-muted mt-1" id="prev-trend">Monsoon intensity peaked with 150mm/hr rainfall breach. Ground saturated at 88%.</div>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+
+  </div>
+
+  <!-- JavaScript -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    let speechEnabled = true;
+
+    document.addEventListener("DOMContentLoaded", function () {
+      checkActivePCAlert();
+      setInterval(checkActivePCAlert, 5000); // Poll active PC alerts every 5 seconds
+    });
+
+    function toggleSpeech() {
+      speechEnabled = !speechEnabled;
+      document.getElementById("speech-status").innerText = speechEnabled ? "ON" : "OFF";
+    }
+
+    function checkActivePCAlert() {
+      fetch("/api/sos/active_parallel_alerts")
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.status === "success" && data.count > 0) {
+            const alert = data.alerts[0];
+            const pub = alert.public_payload || {};
+            const loc = pub.location || {};
+            const container = document.getElementById("pc-alert-banner-container");
+            container.style.display = "block";
+            document.getElementById("pc-alert-text").innerHTML = `
+              <strong>[${alert.disaster_type} ${alert.severity}]</strong> ${loc.area_name || "Mumbai Coastal Zone"}: ${pub.message || "Evacuate immediately!"}
+            `;
+          }
+        })
+        .catch((err) => console.log("Alert listener polling:", err));
+    }
+
+    function sendQuickQuery(text) {
+      document.getElementById("user-input").value = text;
+      sendQuery();
+    }
+
+    function sendQuery() {
+      const input = document.getElementById("user-input");
+      const query = input.value.trim();
+      if (!query) return;
+
+      appendMessage("user", query);
+      input.value = "";
+
+      fetch("/api/public/assistant_query", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ query: query, language: "en" })
+      })
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.response) {
+            appendMessage("ai", data.response);
+            if (speechEnabled && window.speechSynthesis) {
+              const utter = new SpeechSynthesisUtterance(data.response.replace(/[^\w\s.,!]/gi, ''));
+              window.speechSynthesis.speak(utter);
+            }
+          }
+        })
+        .catch((err) => {
+          appendMessage("ai", "⚠️ Error fetching response. Ground telemetry online.");
+        });
+    }
+
+    function appendMessage(sender, text) {
+      const chatBox = document.getElementById("chat-box");
+      const bubble = document.createElement("div");
+      bubble.className = sender === "user" ? "chat-bubble-user" : "chat-bubble-ai";
+      bubble.innerText = text;
+      chatBox.appendChild(bubble);
+      chatBox.scrollTop = chatBox.scrollHeight;
+    }
+
+    function startMicRecognition() {
+      if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+        alert("Speech Recognition not supported in this browser.");
+        return;
+      }
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      const rec = new SpeechRecognition();
+      rec.lang = 'en-US';
+      rec.start();
+      rec.onresult = function(e) {
+        document.getElementById("user-input").value = e.results[0][0].transcript;
+        sendQuery();
+      };
+    }
+  </script>
+</body>
+</html>

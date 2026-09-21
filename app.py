@@ -792,12 +792,36 @@ def get_active_parallel_alerts_route():
     alerts = get_active_parallel_alerts(limit=10)
     return jsonify({"status": "success", "count": len(alerts), "alerts": alerts})
 
+@app.route("/dsquare_gpt")
+def render_dsquare_gpt():
+    """Standalone D-SQUARE GPT Weather Conversational AI Portal."""
+    return render_template("dsquare_gpt.html")
+
+
+@app.route("/api/public/weather_telemetry", methods=["GET"])
+def get_public_weather_telemetry():
+    """Returns instant weather telemetry, satellite pixel indices, and past 24h weather history."""
+    instant_w = safety_assistant.get_instant_weather_telemetry()
+    sat_px = safety_assistant.get_satellite_pixels_info()
+    prev_w = safety_assistant.get_previous_weather_history()
+
+    return jsonify({
+        "status": "success",
+        "timestamp": datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "instant_weather": instant_w,
+        "satellite_pixels": sat_px,
+        "previous_weather": prev_w
+    })
+
+
 @app.route("/api/public/assistant_query", methods=["POST"])
 def post_public_assistant_query():
     body = request.get_json(silent=True) or {}
     query_text = body.get("query", "").lower()
     lang = body.get("language", "en").lower()
-    disaster_type = body.get("disaster_type", "FLOOD").upper()
+
+    # Query Conversational AI Safety Assistant
+    ai_res = safety_assistant.answer_user_query(query_text, lang=lang)
 
     shelters = get_shelters_list()
     nearest_shelter = shelters[0] if shelters else {
@@ -807,8 +831,7 @@ def post_public_assistant_query():
         "contact_number": "+91-22-28491000"
     }
 
-    localized = MultiLanguageLocalization.get_localized_content(disaster_type, lang)
-
+    # Add specific overrides for shelter, kit, route keywords
     if "shelter" in query_text or "safe" in query_text:
         resp = f"🏠 Nearest Shelter: {nearest_shelter['name']}\n📍 Address: {nearest_shelter['address']}\n🛏️ Available Beds: {nearest_shelter['available_beds']}\n📞 Emergency Contact: {nearest_shelter['contact_number']}"
     elif "kit" in query_text or "carry" in query_text:
@@ -818,13 +841,21 @@ def post_public_assistant_query():
     elif "road" in query_text or "block" in query_text:
         resp = "🚧 Road Closure Update: Coastal Highway Sector 2 is blocked due to 2.5m water inundation. Use High Ground Bypass Road."
     else:
-        resp = localized.get("message", f"🚨 {disaster_type} ALERT! Evacuate to higher ground immediately.")
+        resp = ai_res["response"]
+
+    localized = MultiLanguageLocalization.get_localized_content("FLOOD", lang)
 
     return jsonify({
         "status": "success",
         "query": query_text,
         "language": lang,
+        "category": ai_res.get("category", "GENERAL"),
         "response": resp,
+        "instant_weather": ai_res.get("instant_weather"),
+        "satellite_pixels": ai_res.get("satellite_pixels"),
+        "previous_weather": ai_res.get("previous_weather"),
+        "has_active_pc_alert": ai_res.get("has_active_pc_alert", False),
+        "active_pc_alert": ai_res.get("active_pc_alert"),
         "safety_instructions": localized.get("safety_steps", []),
         "shelter_details": nearest_shelter
     })
