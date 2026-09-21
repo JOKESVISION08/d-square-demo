@@ -1,0 +1,12 @@
+flask
+flask-cors
+numpy
+pillow
+requests
+twilio
+gunicorn
+pyjwt
+torch
+torchvision
+scikit-learn
+pandas

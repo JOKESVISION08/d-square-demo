@@ -1,0 +1,22 @@
+{
+  "timestamp": 1789667334.55232,
+  "formatted_time": "2026-09-17 23:18:54",
+  "nisar_pixels": {
+    "red": 0.0,
+    "green": 1.0,
+    "blue": 0.0,
+    "nir": 0.75,
+    "swir": 0.15,
+    "thermal": 26.5,
+    "l_band_db": -12.4,
+    "s_band_db": -8.6
+  },
+  "predicted_disaster": "None",
+  "risk_level": "LOW",
+  "confidence_percent": 88.87,
+  "location": {
+    "lat": 30.0668,
+    "lon": 79.0193,
+    "roi": "Uttarakhand Himalayan Grid"
+  }
+}

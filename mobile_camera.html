@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>D-SQUARE 2.0 | Unified ISRO Satellite & Mobile Camera Sensing</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+  <style>
+    body {
+      background-color: #090d16;
+      color: #f8fafc;
+      font-family: system-ui, -apple-system, sans-serif;
+    }
+    .video-container {
+      position: relative;
+      width: 100%;
+      max-width: 480px;
+      margin: 0 auto;
+      border-radius: 12px;
+      overflow: hidden;
+      border: 2px solid #38bdf8;
+      background-color: #000;
+    }
+    video, img#preview-img {
+      width: 100%;
+      height: 330px;
+      object-fit: cover;
+    }
+    .overlay-badge {
+      position: absolute;
+      top: 12px;
+      left: 12px;
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-weight: 700;
+      font-size: 0.85rem;
+    }
+    .led-indicator {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      display: inline-block;
+      box-shadow: 0 0 12px rgba(255,255,255,0.4);
+    }
+    .led-green { background-color: #22c55e; box-shadow: 0 0 15px #22c55e; }
+    .led-orange { background-color: #f97316; box-shadow: 0 0 15px #f97316; }
+    .led-red { background-color: #ef4444; box-shadow: 0 0 18px #ef4444; }
+    .btn-sensing-active {
+      background-color: #ef4444 !important;
+      color: white !important;
+      border-color: #dc2626 !important;
+    }
+    .nisar-radar-overlay {
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      pointer-events: none;
+      border: 2px dashed rgba(56, 189, 248, 0.6);
+      background: radial-gradient(circle, rgba(56,189,248,0.08) 0%, rgba(0,0,0,0) 75%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .nisar-scan-line {
+      position: absolute;
+      width: 100%;
+      height: 3px;
+      background: linear-gradient(90deg, transparent, #38bdf8, #22c55e, transparent);
+      top: 0;
+      animation: nisarScan 2s linear infinite;
+      box-shadow: 0 0 15px #38bdf8;
+    }
+    @keyframes nisarScan {
+      0% { top: 0%; }
+      50% { top: 100%; }
+      100% { top: 0%; }
+    }
+    .nisar-grid-target {
+      width: 140px;
+      height: 140px;
+      border: 1px dashed rgba(34, 197, 94, 0.8);
+      border-radius: 50%;
+      position: relative;
+    }
+    .nisar-grid-target::before {
+      content: '';
+      position: absolute;
+      top: 50%; left: 0; width: 100%; height: 1px;
+      background: rgba(34, 197, 94, 0.6);
+    }
+    .nisar-grid-target::after {
+      content: '';
+      position: absolute;
+      left: 50%; top: 0; height: 100%; width: 1px;
+      background: rgba(34, 197, 94, 0.6);
+    }
+  </style>
+</head>
+<body class="py-3">
+
+  <div class="container text-center">
+    <div class="d-flex justify-content-center align-items-center gap-2 mb-2">
+      <i class="fa-solid fa-satellite-dish text-info fa-2x"></i>
+      <h3 class="mb-0 fw-bold">D-SQUARE 2.0 Mobile Sensing</h3>
+    </div>
+    <p class="text-muted small mb-3">ISRO-NASA NISAR Radar Orbit Pass + Mobile Back Camera Auto-Upload</p>
+
+    <!-- HTTP / HTTPS Notice Banner -->
+    <div id="http-warning-banner" class="alert alert-warning py-2 mb-3 small" style="display:none; max-width: 480px; margin: 0 auto;">
+      <i class="fa-solid fa-triangle-exclamation me-1 text-danger"></i>
+      Mobile browser blocking live HTTP video stream.<br>
+      <a id="https-switch-link" href="#" class="btn btn-sm btn-dark text-warning mt-1 fw-bold"><i class="fa-solid fa-shield-halved me-1"></i> Switch to Secure HTTPS Link</a>
+    </div>
+
+    <!-- Video / Captured Image Container with NISAR Orbit Radar Overlay -->
+    <div class="video-container shadow-lg mb-3">
+      <video id="webcam" autoplay playsinline muted></video>
+      <img id="preview-img" style="display:none;" alt="Captured Mobile Camera Image">
+      
+      <!-- NISAR Orbit Radar Sweep Viewfinder Overlay -->
+      <div class="nisar-radar-overlay">
+        <div class="nisar-scan-line"></div>
+        <div class="nisar-grid-target"></div>
+      </div>
+
+      <div id="status-overlay" class="overlay-badge bg-secondary text-white">
+        <i class="fa-solid fa-circle me-1"></i> NISAR RADAR STANDBY
+      </div>
+    </div>
+
+    <!-- Hidden Canvas & Native Camera Input -->
+    <canvas id="frame-canvas" width="224" height="224" style="display:none;"></canvas>
+    <input type="file" id="native-cam-input" accept="image/*" capture="environment" style="display:none;" onchange="handleNativePhoto(this)">
+
+    <!-- SINGLE UNIFIED SATELLITE SENSING BUTTON -->
+    <div style="max-width: 480px; margin: 0 auto;">
+      <button id="btn-unified-sensing" class="btn btn-warning text-dark fw-bold btn-lg w-100 py-3 shadow mb-2" onclick="toggleUnifiedSensing()">
+        <i class="fa-solid fa-satellite me-2"></i> START NISAR SATELLITE RADAR SENSING
+      </button>
+      <button class="btn btn-outline-info text-info btn-sm w-100 py-2 mb-3" onclick="triggerNativeCamera()">
+        <i class="fa-solid fa-camera me-1"></i> 📷 Snap / Upload Camera Photo (Instant Shutter)
+      </button>
+    </div>
+
+    <!-- Stream Rates & Status Card -->
+    <div class="card bg-dark border-secondary p-3 mx-auto shadow-sm" style="max-width: 480px;">
+      <div class="row align-items-center text-start">
+        <div class="col-6">
+          <div class="small text-muted">NISAR RADAR PASS RATES:</div>
+          <div class="d-flex align-items-center gap-2 mt-1">
+            <span class="badge bg-warning text-dark" id="sat-fps-badge">🛰️ NISAR Dual-SAR: 5.0 FPS</span>
+          </div>
+          <div class="mt-1">
+            <span class="badge bg-info" id="cam-fps-badge">📱 Mobile Back Cam: 5.0 FPS</span>
+          </div>
+        </div>
+        <div class="col-6 text-end">
+          <div class="small text-muted">STATUS & ALARM:</div>
+          <div class="d-flex align-items-center justify-content-end gap-2 mt-1">
+            <span class="led-indicator led-green" id="led-bulb"></span>
+            <strong id="led-text" class="text-success small">NORMAL</strong>
+          </div>
+          <div class="mt-1">
+            <span class="badge bg-secondary" id="buzzer-badge"><i class="fa-solid fa-volume-xmark me-1"></i> Off</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Live NISAR & ISRO Satellite Telemetry Bar -->
+    <div class="p-2 bg-dark rounded border border-warning small mt-3 mx-auto text-center" style="max-width: 480px;">
+      <div class="text-warning fw-semibold mb-1"><i class="fa-solid fa-satellite me-1"></i> NISAR Dual-SAR (L-band & S-band) Orbit Telemetry</div>
+      <div class="d-flex justify-content-around text-muted">
+        <span>NDVI: <strong class="text-success" id="sat-val-ndvi">0.72</strong></span>
+        <span>L-Band: <strong class="text-info" id="sat-val-lband">-12.4 dB</strong></span>
+        <span>Soil M: <strong class="text-info" id="sat-val-soil">42%</strong></span>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    const TARGET_SERVER = (window.location.hostname === 'harmonious-gelato-fda171.netlify.app' || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+      ? '' 
+      : 'https://harmonious-gelato-fda171.netlify.app';
+
+    let video = document.getElementById('webcam');
+    let previewImg = document.getElementById('preview-img');
+    let canvas = document.getElementById('frame-canvas');
+    let ctx = canvas.getContext('2d');
+    
+    let isSensingActive = false;
+    let cameraInterval = null;
+    let satelliteInterval = null;
+
+    let lastFrameTime = performance.now();
+    let frameCount = 0;
+    let currentFps = 5.0;
+
+    // Single Unified Action: "START SATELLITE SENSING"
+    async function toggleUnifiedSensing() {
+      const btn = document.getElementById('btn-unified-sensing');
+
+      if (!isSensingActive) {
+        // 1. Activate Mobile Rear / Back Camera automatically
+        let stream = null;
+        const constraintOptions = [
+          { video: { facingMode: { ideal: "environment" }, width: { ideal: 640 }, height: { ideal: 480 } } },
+          { video: { facingMode: "environment" } },
+          { video: true }
+        ];
+
+        for (let option of constraintOptions) {
+          try {
+            stream = await navigator.mediaDevices.getUserMedia(option);
+            if (stream) break;
+          } catch (e) {
+            console.warn("getUserMedia option failed:", option, e);
+          }
+        }
+
+        if (stream) {
+          video.srcObject = stream;
+          video.style.display = 'block';
+          previewImg.style.display = 'none';
+          try {
+            await video.play();
+          } catch(err) {
+            console.warn("Video play error:", err);
+          }
+        } else {
+          // Fallback to Native Mobile Camera Photo input if getUserMedia blocked
+          document.getElementById('native-cam-input').click();
+        }
+
+        isSensingActive = true;
+        btn.className = 'btn btn-danger text-white fw-bold btn-lg w-100 py-3 shadow mb-3 btn-sensing-active';
+        btn.innerHTML = '<i class="fa-solid fa-satellite-dish me-2"></i> STOP NISAR RADAR SENSING';
+
+        // 2. Automatically start capturing mobile back camera pictures & uploading to Fusion Engine at 5 FPS
+        // 2. Automatically start capturing mobile back camera pictures & uploading to Fusion Engine at optimized rate
+        lastFrameTime = performance.now();
+        frameCount = 0;
+        // Optimized to 350ms (3 FPS) for low-memory mobile device stability
+        cameraInterval = setInterval(captureAndUploadFrame, 350);
+
+        // 3. Automatically start ISRO-NASA NISAR Satellite Remote Sensing Telemetry stream
+        fetchSatelliteTelemetry();
+        satelliteInterval = setInterval(fetchSatelliteTelemetry, 1000);
+
+      } else {
+        // Stop Sensing Workflow
+        if (video.srcObject) {
+          video.srcObject.getTracks().forEach(track => track.stop());
+        }
+        clearInterval(cameraInterval);
+        clearInterval(satelliteInterval);
+        isSensingActive = false;
+
+        btn.className = 'btn btn-warning text-dark fw-bold btn-lg w-100 py-3 shadow mb-3';
+        btn.innerHTML = '<i class="fa-solid fa-satellite me-2"></i> START NISAR SATELLITE RADAR SENSING';
+
+        document.getElementById('status-overlay').className = 'overlay-badge bg-secondary text-white';
+        document.getElementById('status-overlay').innerHTML = '<i class="fa-solid fa-circle me-1"></i> NISAR RADAR STANDBY';
+      }
+    }
+
+    function captureAndUploadFrame() {
+      if (!isSensingActive) return;
+      
+      let dataUrl = "";
+      try {
+        ctx.clearRect(0, 0, 224, 224);
+        if (video.srcObject && video.style.display !== 'none') {
+          ctx.drawImage(video, 0, 0, 224, 224);
+          // Optimized JPEG compression quality to 0.3 for minimal memory footprint
+          dataUrl = canvas.toDataURL('image/jpeg', 0.3);
+        } else if (previewImg.src && previewImg.style.display !== 'none') {
+          ctx.drawImage(previewImg, 0, 0, 224, 224);
+          dataUrl = canvas.toDataURL('image/jpeg', 0.3);
+        }
+      } catch (memErr) {
+        console.warn("Memory pressure safeguard:", memErr);
+        return;
+      }
+
+      const now = performance.now();
+      frameCount++;
+      const elapsed = (now - lastFrameTime) / 1000.0;
+      if (elapsed >= 1.0) {
+        currentFps = Math.round((frameCount / elapsed) * 10) / 10;
+        if (currentFps > 10.0) currentFps = 5.0;
+        frameCount = 0;
+        lastFrameTime = now;
+      }
+
+      fetch(TARGET_SERVER + '/analyze_image', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ image: dataUrl, fps: currentFps, nisar_mode: true })
+      })
+      .then(res => res.json())
+      .then(data => {
+        updateSensingUI(data);
+        dataUrl = null; // Explicit garbage collection hint
+      })
+      .catch(err => console.error("Camera frame upload error:", err));
+    }
+
+    function fetchSatelliteTelemetry() {
+      fetch(TARGET_SERVER + '/api/start_satellite_sensing', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ scenario: 'normal' })
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.satellite_fps) {
+          document.getElementById('sat-fps-badge').innerText = `🛰️ NISAR Dual-SAR: ${data.satellite_fps} FPS`;
+        }
+        if (data.satellite_metrics) {
+          document.getElementById('sat-val-ndvi').innerText = data.satellite_metrics.raw_ndvi || '0.72';
+          document.getElementById('sat-val-lband').innerText = '-12.4 dB';
+          document.getElementById('sat-val-soil').innerText = `${data.satellite_metrics.raw_soil_moisture || '42'}%`;
+        }
+      })
+      .catch(err => console.error("Satellite telemetry error:", err));
+    }
+
+    function handleNativePhoto(input) {
+      if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          previewImg.src = e.target.result;
+          previewImg.style.display = 'block';
+          video.style.display = 'none';
+
+          previewImg.onload = function() {
+            try {
+              ctx.clearRect(0, 0, 224, 224);
+              ctx.drawImage(previewImg, 0, 0, 224, 224);
+              const resizedDataUrl = canvas.toDataURL('image/jpeg', 0.3);
+
+              fetch(TARGET_SERVER + '/analyze_image', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ image: resizedDataUrl, fps: 5.0, nisar_mode: true, is_snapshot: true })
+              })
+              .then(res => res.json())
+              .then(data => updateSensingUI(data))
+              .catch(err => console.error("Image upload error:", err));
+
+              if (!isSensingActive) {
+                isSensingActive = true;
+                cameraInterval = setInterval(captureAndUploadFrame, 350);
+                fetchSatelliteTelemetry();
+                satelliteInterval = setInterval(fetchSatelliteTelemetry, 1000);
+              }
+            } catch(err) {
+              console.error("Native photo resize error:", err);
+            }
+          };
+        };
+        reader.readAsDataURL(input.files[0]);
+      }
+    }
+
+    function updateSensingUI(data) {
+      if (data.mobile_fps) {
+        document.getElementById('cam-fps-badge').innerText = `📱 Mobile Back Cam: ${data.mobile_fps} FPS`;
+      }
+      if (data.satellite_fps) {
+        document.getElementById('sat-fps-badge').innerText = `🛰️ ISRO Sat Stream: ${data.satellite_fps} FPS`;
+      }
+
+      const camPred = data.camera_prediction || {};
+      const status = camPred.camera_status || 'Normal_Green';
+      const ledBulb = document.getElementById('led-bulb');
+      const ledText = document.getElementById('led-text');
+      const overlay = document.getElementById('status-overlay');
+      const buzzerBadge = document.getElementById('buzzer-badge');
+
+      if (status === 'Critical_Red') {
+        ledBulb.className = 'led-indicator led-red';
+        ledText.className = 'text-danger small';
+        ledText.innerText = 'CRITICAL (RED)';
+        overlay.className = 'overlay-badge bg-danger text-white';
+        overlay.innerHTML = '<i class="fa-solid fa-triangle-exclamation me-1"></i> CRITICAL STATE';
+        buzzerBadge.className = 'badge bg-danger';
+        buzzerBadge.innerHTML = '<i class="fa-solid fa-volume-high me-1"></i> Alarm';
+      } else if (status === 'Warning_Orange') {
+        ledBulb.className = 'led-indicator led-orange';
+        ledText.className = 'text-warning small';
+        ledText.innerText = 'WARNING';
+        overlay.className = 'overlay-badge bg-warning text-dark';
+        overlay.innerHTML = '<i class="fa-solid fa-triangle-exclamation me-1"></i> WARNING';
+        buzzerBadge.className = 'badge bg-warning text-dark';
+        buzzerBadge.innerHTML = '<i class="fa-solid fa-volume-low me-1"></i> Beep';
+      } else {
+        ledBulb.className = 'led-indicator led-green';
+        ledText.className = 'text-success small';
+        ledText.innerText = 'NORMAL';
+        overlay.className = 'overlay-badge bg-success text-white';
+        overlay.innerHTML = '<i class="fa-solid fa-circle-check me-1"></i> SENSING ACTIVE';
+        buzzerBadge.className = 'badge bg-secondary';
+        buzzerBadge.innerHTML = '<i class="fa-solid fa-volume-xmark me-1"></i> Off';
+      }
+    }
+
+    function triggerNativeCamera() {
+      if (!isSensingActive) {
+        toggleUnifiedSensing();
+      } else {
+        document.getElementById('native-cam-input').click();
+      }
+    }
+
+    // HTTP / HTTPS protocol check on page load
+    window.addEventListener('DOMContentLoaded', () => {
+      if (window.location.protocol === 'http:' && window.location.hostname !== '127.0.0.1' && window.location.hostname !== 'localhost') {
+        const banner = document.getElementById('http-warning-banner');
+        if (banner) {
+          banner.style.display = 'block';
+          const link = banner.querySelector('a');
+          if (link) {
+            link.href = `https://${window.location.hostname}:5000/mobile_camera`;
+          }
+        }
+      }
+    });
+  </script>
+</body>
+</html>

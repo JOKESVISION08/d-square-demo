@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>D-SQUARE 2.0 - Mobile Emergency SOS</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <style>
+    body { background-color: #0f172a; color: #f8fafc; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+    .sos-card { background: #1e293b; border-radius: 12px; border: 1px solid #334155; padding: 16px; margin-bottom: 16px; }
+    .btn-sos { background: linear-gradient(135deg, #ef4444, #dc2626); color: white; font-size: 1.5rem; font-weight: bold; border-radius: 12px; padding: 18px; border: none; width: 100%; box-shadow: 0 4px 14px rgba(239, 68, 68, 0.4); }
+    .btn-sos:hover { background: #b91c1c; color: white; }
+  </style>
+</head>
+<body>
+  <div class="container py-3">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <h4 class="text-danger fw-bold mb-0"><i class="fa-solid fa-triangle-exclamation me-2"></i>D-SQUARE Mobile SOS</h4>
+      <div>
+        <a href="tel:112" class="btn btn-danger btn-sm text-decoration-none fw-bold me-2"><i class="fa-solid fa-phone me-1"></i> CALL 112</a>
+        <span class="badge bg-danger" id="data-mode-badge">VERIFIED_HARDWARE</span>
+      </div>
+    </div>
+
+    <!-- 1-Click SOS Button -->
+    <div class="mb-4 text-center">
+      <button class="btn-sos" onclick="triggerMobileSOS()">
+        <i class="fa-solid fa-phone-flip me-2"></i> SEND SOS EMERGENCY ALERT
+      </button>
+      <div class="small text-muted mt-2">Sends GPS coordinates to NDRF rescue teams and contacts.</div>
+    </div>
+
+    <!-- Active Risk Alert Banner -->
+    <div class="sos-card border-danger" id="alert-card" style="display: none;">
+      <h5 class="text-danger fw-bold mb-1" id="alert-title">🚨 CRITICAL RISK DETECTED</h5>
+      <p class="small text-white mb-0" id="alert-message">High soil moisture and slope movement recorded.</p>
+    </div>
+
+    <!-- D-SQUARE GPT Assistant Chat -->
+    <div class="sos-card">
+      <h6 class="text-info fw-bold mb-2"><i class="fa-solid fa-robot me-2"></i>D-SQUARE GPT Assistant</h6>
+      <div id="chat-box" style="height: 150px; overflow-y: auto; background: #0f172a; padding: 10px; border-radius: 8px;" class="small mb-2">
+        <div class="text-info">👋 Hello! Ask me about weather, landslide risks, or evacuation routes.</div>
+      </div>
+      <div class="input-group input-group-sm">
+        <input type="text" class="form-control bg-dark text-white border-secondary" id="chat-input" placeholder="Ask assistant...">
+        <button class="btn btn-info" onclick="sendChatMessage()"><i class="fa-solid fa-paper-plane"></i></button>
+      </div>
+    </div>
+
+    <!-- Map & Route Container -->
+    <div class="sos-card">
+      <h6 class="text-warning fw-bold mb-2"><i class="fa-solid fa-map-location-dot me-2"></i>Evacuation Map</h6>
+      <div id="sos-map" style="height: 240px; border-radius: 8px;"></div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="/static/js/mobile_sos.js"></script>
+</body>
+</html>

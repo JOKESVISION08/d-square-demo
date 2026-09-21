@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>D-SQUARE 2.0 - Quadruple AI Disaster Surveillance Dashboard</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body { background-color: #0b1329; color: #e2e8f0; font-family: 'Segoe UI', Tahoma, sans-serif; }
+    .sensor-card { background: #172a46; border-radius: 10px; border: 1px solid #1e3a5f; padding: 16px; transition: transform 0.2s; }
+    .sensor-card:hover { transform: translateY(-3px); }
+    .val-large { font-size: 1.8rem; font-weight: bold; }
+    .alert-banner { border-radius: 8px; padding: 14px; font-weight: bold; display: none; }
+  </style>
+</head>
+<body>
+
+  <!-- Navigation Bar -->
+  <nav class="navbar navbar-dark bg-dark border-bottom border-secondary px-3">
+    <div class="container-fluid">
+      <span class="navbar-brand fw-bold text-info"><i class="fa-solid fa-satellite-dish me-2"></i>D-SQUARE 2.0 Multi-Disaster AI Surveillance</span>
+      <div class="d-flex align-items-center gap-3">
+        <select class="form-select form-select-sm bg-dark text-white border-secondary" id="node-selector">
+          <option value="D-SQUARE_NODE_01">Node 01: Uttarakhand Station</option>
+          <option value="D-SQUARE_NODE_02">Node 02: High-Altitude Sector</option>
+        </select>
+        <button class="btn btn-danger btn-sm fw-bold" onclick="triggerSOS()"><i class="fa-solid fa-phone-volume me-1"></i> TRIGGER SOS</button>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container-fluid py-3 px-4">
+    <!-- Real-time Alert Banner -->
+    <div class="alert-banner bg-danger text-white mb-3" id="alert-banner">
+      <i class="fa-solid fa-triangle-exclamation fa-lg me-2"></i>
+      <span id="alert-banner-text">CRITICAL LANDSLIDE RISK DETECTED BY GROUND SENSORS!</span>
+    </div>
+
+    <!-- 10 Sensor Cards Row -->
+    <div class="row g-3 mb-4">
+      <div class="col-md-2 col-6">
+        <div class="sensor-card text-info">
+          <div class="small text-muted mb-1"><i class="fa-solid fa-temperature-high me-1"></i> Temperature</div>
+          <div class="val-large text-white" id="val-temp">28.5 °C</div>
+        </div>
+      </div>
+      <div class="col-md-2 col-6">
+        <div class="sensor-card text-primary">
+          <div class="small text-muted mb-1"><i class="fa-solid fa-droplet me-1"></i> Humidity</div>
+          <div class="val-large text-white" id="val-hum">65 %</div>
+        </div>
+      </div>
+      <div class="col-md-2 col-6">
+        <div class="sensor-card text-warning">
+          <div class="small text-muted mb-1"><i class="fa-solid fa-water me-1"></i> Soil Moisture</div>
+          <div class="val-large text-white" id="val-soil">42 %</div>
+        </div>
+      </div>
+      <div class="col-md-2 col-6">
+        <div class="sensor-card text-secondary">
+          <div class="small text-muted mb-1"><i class="fa-solid fa-smog me-1"></i> MQ2 Gas</div>
+          <div class="val-large text-white" id="val-gas">NORMAL</div>
+        </div>
+      </div>
+      <div class="col-md-2 col-6">
+        <div class="sensor-card text-danger">
+          <div class="small text-muted mb-1"><i class="fa-solid fa-fire me-1"></i> Flame Sensor</div>
+          <div class="val-large text-white" id="val-flame">SAFE</div>
+        </div>
+      </div>
+      <div class="col-md-2 col-6">
+        <div class="sensor-card text-success">
+          <div class="small text-muted mb-1"><i class="fa-solid fa-compass me-1"></i> MPU6050 Gyro</div>
+          <div class="val-large text-white" id="val-gyro">0.0, 0.0</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main Content Grid -->
+    <div class="row g-3">
+      <!-- Leaflet Map Column -->
+      <div class="col-md-7">
+        <div class="sensor-card p-2 mb-3">
+          <h6 class="text-info fw-bold mb-2"><i class="fa-solid fa-map-location-dot me-2"></i>Live Ground Node & Shelter Map</h6>
+          <div id="main-map" style="height: 320px; border-radius: 8px;"></div>
+        </div>
+      </div>
+
+      <!-- Chart Column -->
+      <div class="col-md-5">
+        <div class="sensor-card p-3">
+          <h6 class="text-warning fw-bold mb-2"><i class="fa-solid fa-chart-line me-2"></i>Soil Moisture & Temp Trend</h6>
+          <canvas id="trendChart" height="220"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
+    let map = null;
+    let chart = null;
+    const CLOUD_TUNNEL_URL = "https://competitors-insert-peas-above.trycloudflare.com";
+
+    document.addEventListener("DOMContentLoaded", () => {
+      initMap();
+      initChart();
+      pollSensorData();
+      setInterval(pollSensorData, 2000);
+    });
+
+    function initMap() {
+      map = L.map("main-map").setView([30.0668, 79.0193], 12);
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 18 }).addTo(map);
+      L.marker([30.0668, 79.0193]).addTo(map).bindPopup("<b>D-SQUARE Node 01</b><br>Uttarakhand Sector").openPopup();
+      L.circle([30.0820, 79.0310], { color: "green", radius: 600 }).addTo(map).bindPopup("Safe Shelter Center");
+    }
+
+    function initChart() {
+      const ctx = document.getElementById("trendChart").getContext("2d");
+      chart = new Chart(ctx, {
+        type: "line",
+        data: {
+          labels: ["12:00", "13:00", "14:00", "15:00", "16:00"],
+          datasets: [
+            { label: "Soil Moisture (%)", data: [38, 42, 45, 78, 88], borderColor: "#f59e0b", fill: false },
+            { label: "Temperature (°C)", data: [24, 25, 26, 27, 28], borderColor: "#38bdf8", fill: false }
+          ]
+        },
+        options: { responsive: true, maintainAspectRatio: false }
+      });
+    }
+
+    function pollSensorData() {
+      fetch("/api/latest_sensor_data")
+        .then(r => r.json())
+        .catch(() => fetch(`${CLOUD_TUNNEL_URL}/api/latest_sensor_data`).then(r => r.json()))
+        .then(d => {
+          if (!d) return;
+          document.getElementById("val-temp").innerText = `${d.temperature.toFixed(1)} °C`;
+          document.getElementById("val-hum").innerText = `${d.humidity.toFixed(1)} %`;
+          document.getElementById("val-soil").innerText = `${d.soil_moisture.toFixed(1)} %`;
+          document.getElementById("val-gas").innerText = d.mq2_gas === 1 ? "SMOKE ALERT" : "NORMAL";
+          document.getElementById("val-flame").innerText = d.flame === 1 ? "FIRE DETECTED" : "SAFE";
+          document.getElementById("val-gyro").innerText = `${d.gyro_x.toFixed(1)}, ${d.gyro_y.toFixed(1)}`;
+
+          const banner = document.getElementById("alert-banner");
+          if (d.scenario === "landslide" || d.scenario === "fire" || d.soil_moisture >= 80) {
+            banner.style.display = "block";
+            document.getElementById("alert-banner-text").innerText = `🚨 CRITICAL RISK DETECTED: ${(d.scenario).toUpperCase()} WARNING ON ${d.node_id}`;
+          } else {
+            banner.style.display = "none";
+          }
+        }).catch(() => {});
+    }
+
+    function triggerSOS() {
+      fetch("/api/sos", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ user_id: "DASHBOARD_USER", latitude: 30.0668, longitude: 79.0193, disaster_type: "Manual Trigger" })
+      }).then(r => r.json()).then(res => alert(res.message));
+    }
+  </script>
+</body>
+</html>

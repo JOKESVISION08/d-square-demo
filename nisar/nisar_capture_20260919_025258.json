@@ -1,0 +1,30 @@
+{
+  "event_id": "NISAR_FRAME_20260919_025258",
+  "disaster_type": "None",
+  "risk_level": "NORMAL",
+  "timestamp": "2026-09-19T02:52:58.536343",
+  "satellite": "ISRO-NASA NISAR Dual-SAR",
+  "product": "L-Band (-4.8dB Landslide / -12.4dB Normal) / S-Band",
+  "latitude": 30.0668,
+  "longitude": 79.0193,
+  "nisar_pixels": {
+    "red": 0.52,
+    "green": 0.28,
+    "blue": 0.15,
+    "nir": 0.15,
+    "swir": 0.35,
+    "thermal": 52.0,
+    "l_band_db": -6.2,
+    "s_band_db": -3.8
+  },
+  "ground_sensors": {
+    "node_id": "ESP8266_LANDSLIDE_NODE_01",
+    "soil_raw": 1015.0,
+    "soil_moisture": 0.0,
+    "temperature": 31.9,
+    "humidity": 77.2,
+    "scenario": "normal",
+    "timestamp": "2026-09-19T02:52:58Z"
+  },
+  "verification_status": "VERIFIED_GEOSPATIAL"
+}
