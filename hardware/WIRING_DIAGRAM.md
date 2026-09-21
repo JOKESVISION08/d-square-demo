@@ -1,65 +1,53 @@
-# Hardware Wiring Diagram & Itemized Bill of Materials (BOM)
+# D-SQUARE 2.0 Hardware Wiring Diagram & Connection Guide
 
-## D-SQUARE 2.0 IoT Ground Node Architecture (10 Sensors + Controls)
+## D-SQUARE IoT Ground Telemetry Station (ESP8266 NodeMCU)
 
-The D-SQUARE 2.0 ground node uses an ESP8266 NodeMCU microcontroller connected to 10 environmental/structural sensors and 2 local alert indicators (Red/Green LED and Piezo Buzzer).
+This wiring layout matches the **Live Ground Telemetry Dashboard** sensors and pin assignments.
 
 ```
  +-------------------------------------------------------------------------+
- |                   ESP8266 NodeMCU Pin Schematic                         |
+ |             ESP8266 NodeMCU Hardware Pin Connection Schematic           |
  |                                                                         |
- |  [D5 / GPIO14] <---> DHT11 Temperature & Humidity Sensor                |
- |  [A0 / Analog] <---> Capacitive Soil Moisture Sensor Analog Output      |
- |  [D0 / GPIO16] <---> Soil Sensor Power Control (Corrosion Prevention)   |
- |  [RX / GPIO10] <---> MQ-2 Smoke & Gas Digital Output                    |
- |  [D6 / GPIO12] <---> SW-420 Digital Vibration Sensor                    |
- |  [D7 / GPIO13] <---> SW-520D Ball Tilt Sensor Switch                    |
- |  [D8 / GPIO15] <---> HC-SR04 Ultrasonic Trigger Pin                     |
- |  [RX / GPIO3]  <---> HC-SR04 Ultrasonic Echo Pin                        |
- |  [D2 / GPIO4]  <---> MPU6050 I2C SDA (Tilt Angle & Gyro Rate)           |
- |  [D1 / GPIO5]  <---> MPU6050 I2C SCL (3-Axis Acceleration)             |
- |  [TX / GPIO1]  <---> Red Alert LED (Active LOW)                         |
- |  [D4 / GPIO2]  <---> Green Status LED (Active LOW)                      |
- |  [D3 / GPIO0]  <---> Active Piezo Buzzer (Active LOW Alarm)             |
- |  [3V3 / 5V]    <---> Common VCC Rail                                    |
- |  [GND]         <---> Common Ground Rail                                 |
+ |  [D5 / GPIO14] <---> DHT11 Temperature & Humidity Sensor Data           |
+ |  [A0 / Analog] <---> Capacitive Soil Moisture Sensor Analog Output (ADC)|
+ |  [D6 / GPIO12] <---> MQ-2 Smoke & Gas Detector Digital Output           |
+ |  [D7 / GPIO13] <---> SW-520D Tilt Sensor Switch Digital Output          |
+ |  [D8 / GPIO15] <---> 801S Vibration Sensor Digital Output               |
+ |  [D2 / GPIO4]  <---> IR Flame Sensor Digital Output                     |
+ |  [D1 / GPIO5]  <---> Green Status LED (Normal Operation)                |
+ |  [D3 / GPIO0]  <---> Red Alert LED & Active Piezo Buzzer                |
+ |  [3V3 / 5V]    <---> VCC Power Rails (3.3V for Sensors / 5V for MQ2)    |
+ |  [GND]         <---> Common Ground (GND) Rail                           |
  +-------------------------------------------------------------------------+
 ```
 
 ---
 
-## Detailed Pin Connection Table
+## Complete Sensor Connection Table
 
-| Sensor / Module | Sensor Pin | ESP8266 NodeMCU Pin | Voltage | Notes |
-| :--- | :--- | :--- | :--- | :--- |
-| **ESP8266 NodeMCU** | USB / Vin | 5V / USB Power | 5V DC | Micro-USB or 5V Adapter |
-| **DHT11** | VCC, Data, GND | 3.3V, D5 (GPIO14), GND | 3.3V | Temperature & Humidity |
-| **Capacitive Soil Moisture Probe** | VCC, AO, GND | D0 (GPIO16 Power), A0 (Analog), GND | 3.3V | Volumetric Water Content (0-100%) |
-| **MQ-2 Smoke & Gas** | VCC, DO, GND | 5V, RX (GPIO10 Digital), GND | 5V | Gas/LPG/Smoke Detection |
-| **SW-420 Vibration** | VCC, DO, GND | 3.3V/5V, D6 (GPIO12), GND | 3.3V | Piezo Vibration Shock Pulse |
-| **SW-520D Tilt Switch** | VCC, DO, GND | 3.3V, D7 (GPIO13), GND | 3.3V | Mechanical Roll/Tilt Contact Switch |
-| **HC-SR04 Water Level** | VCC, Trig, Echo, GND | 5V, D8 (Trig GPIO15), RX (Echo GPIO3), GND | 5V | Ultrasonic Water Level Measurement |
-| **MPU6050 Gyro/Accel** | VCC, SDA, SCL, GND | 3.3V, D2 (SDA GPIO4), D1 (SCL GPIO5), GND | 3.3V | 6-DOF Tilt Angle & Gyro Angular Rates |
-| **Red Alert LED** | Anode (+), Cathode | TX (GPIO1), GND (via 220Ω) | 3.3V | Alert Indicator (Active LOW) |
-| **Green Status LED** | Anode (+), Cathode | D4 (GPIO2), GND (via 220Ω) | 3.3V | Normal Status (Active LOW) |
-| **Piezo Buzzer** | Signal (+), Ground | D3 (GPIO0), GND | 3.3V | 1kHz Audible Alarm (Active LOW) |
+| Sensor Card in Dashboard | Physical Sensor Model | Sensor Pin | ESP8266 NodeMCU Pin | Power Rail | Notes / Logic |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **Temperature** | DHT11 | VCC, Data, GND | **3.3V, D5 (GPIO14), GND** | 3.3V DC | Temperature (°C) Range: 0–50°C |
+| **Humidity** | DHT11 | VCC, Data, GND | **3.3V, D5 (GPIO14), GND** | 3.3V DC | Relative Humidity (40–70% Optimal) |
+| **Soil Moisture** | Capacitive Probe v1.2 | VCC, AO, GND | **3.3V, A0 (ADC0), GND** | 3.3V DC | Raw ADC: 850 (Dry) to 350 (Wet) |
+| **MQ2 Gas/Smoke** | MQ-2 Module | VCC, DO, GND | **5V, D6 (GPIO12), GND** | 5V DC | HIGH = Smoke/LPG Gas Detected |
+| **Tilt Sensor** | SW-520D Ball Switch | VCC, DO, GND | **3.3V, D7 (GPIO13), GND** | 3.3V DC | LOW = Slope Tilt / Unstable |
+| **Vibration** | 801S Shock Sensor | VCC, DO, GND | **3.3V, D8 (GPIO15), GND** | 3.3V DC | HIGH = Seismic Tremor / Vibration |
+| **Flame Sensor** | IR Flame Detector | VCC, DO, GND | **3.3V, D2 (GPIO4), GND** | 3.3V DC | LOW = Infrared Flame Detected |
+| **Green Status LED** | 5mm Green LED | Anode (+), Cathode (-) | **D1 (GPIO5)**, GND via 220Ω | 3.3V DC | ON = System Normal |
+| **Red Alert LED & Buzzer**| 5mm Red LED + Buzzer| Anode (+), Cathode (-) | **D3 (GPIO0)**, GND via 220Ω | 3.3V DC | ON = Hazard Alert Activated |
 
 ---
 
-## Itemized Bill of Materials (BOM) & Budget Breakdown
+## Arduino IDE Flashing Instructions
 
-| Item No. | Component Description | Quantity | Unit Price (INR) | Total Cost (INR) |
-| :---: | :--- | :---: | :---: | :---: |
-| 1 | ESP8266 NodeMCU V3 WiFi Board | 1 | ₹350 | ₹350 |
-| 2 | DHT11 Temperature & Humidity Sensor | 1 | ₹120 | ₹120 |
-| 3 | Capacitive Soil Moisture Sensor Probe v1.2 | 1 | ₹80 | ₹80 |
-| 4 | MQ-2 Gas & Smoke Detector Module | 1 | ₹180 | ₹180 |
-| 5 | MPU6050 6-Axis Gyro/Accelerometer Module | 1 | ₹190 | ₹190 |
-| 6 | SW-420 Vibration Sensor Module | 1 | ₹70 | ₹70 |
-| 7 | SW-520D Tilt Sensor Ball Switch Module | 1 | ₹50 | ₹50 |
-| 8 | HC-SR04 Ultrasonic Sensor Module | 1 | ₹110 | ₹110 |
-| 9 | Active Piezo Buzzer (5V) | 1 | ₹30 | ₹30 |
-| 10 | RGB LED Pack + 220Ω Resistors | 2 | ₹20 | ₹40 |
-| 11 | MB-102 Breadboard & Jumper Wires | 1 | ₹160 | ₹160 |
-| 12 | 5V 2A USB Power Cable | 1 | ₹200 | ₹200 |
-| **TOTAL** | **Hardware Prototype Cost** | **13 Items** | -- | **₹1580** |
+1. Open Arduino IDE and install the **ESP8266 Board Package** (`http://arduino.esp8266.com/stable/package_esp8266com_index.json`).
+2. Go to **Sketch** -> **Include Library** -> **Manage Libraries** and install the **DHT sensor library** by Adafruit.
+3. Open [`esp8266_landslide_wireless.ino`](file:///c:/Users/WELCOME/Downloads/d-square%20demo/esp8266_landslide_wireless.ino).
+4. Enter your WiFi credentials:
+   ```cpp
+   const char* ssid     = "YOUR_WIFI_NAME";
+   const char* password = "YOUR_WIFI_PASSWORD";
+   ```
+5. Select Board: **NodeMCU 1.0 (ESP-12E Module)** and Port.
+6. Click **Upload**.
