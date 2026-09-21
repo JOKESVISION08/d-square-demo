@@ -101,15 +101,75 @@ def init_db():
     )
     """)
 
-    # JWT Users & Rescue Teams Table
+    # JWT Users & Registered Citizens Table
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS users (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id TEXT UNIQUE,
         username TEXT UNIQUE NOT NULL,
         password_hash TEXT NOT NULL,
         role TEXT NOT NULL DEFAULT 'RESCUE_TEAM',
         email TEXT,
-        phone TEXT
+        phone TEXT,
+        latitude REAL DEFAULT 19.0760,
+        longitude REAL DEFAULT 72.8777,
+        app_installed INTEGER DEFAULT 1,
+        sms_subscribed INTEGER DEFAULT 1,
+        whatsapp_subscribed INTEGER DEFAULT 1
+    )
+    """)
+
+    for col_name, col_type in [
+        ("user_id", "TEXT"),
+        ("latitude", "REAL DEFAULT 19.0760"),
+        ("longitude", "REAL DEFAULT 72.8777"),
+        ("app_installed", "INTEGER DEFAULT 1"),
+        ("sms_subscribed", "INTEGER DEFAULT 1"),
+        ("whatsapp_subscribed", "INTEGER DEFAULT 1")
+    ]:
+        try:
+            cursor.execute(f"ALTER TABLE users ADD COLUMN {col_name} {col_type}")
+        except Exception:
+            pass
+
+    # Rescue Teams Table
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS rescue_teams (
+        team_id TEXT PRIMARY KEY,
+        team_name TEXT NOT NULL,
+        team_type TEXT NOT NULL,
+        latitude REAL NOT NULL,
+        longitude REAL NOT NULL,
+        status TEXT NOT NULL DEFAULT 'AVAILABLE',
+        assigned_alert_id INTEGER
+    )
+    """)
+
+    # Rescue Requests Table
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS rescue_requests (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id TEXT NOT NULL,
+        alert_id INTEGER,
+        latitude REAL NOT NULL,
+        longitude REAL NOT NULL,
+        trapped_count INTEGER DEFAULT 1,
+        priority TEXT NOT NULL DEFAULT 'MEDIUM',
+        status TEXT NOT NULL DEFAULT 'PENDING',
+        assigned_team_id TEXT,
+        created_at TEXT NOT NULL
+    )
+    """)
+
+    # Alert Delivery Channel Recipients Table
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS alert_recipients (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        alert_id INTEGER NOT NULL,
+        user_id TEXT NOT NULL,
+        delivery_channel TEXT NOT NULL,
+        delivery_status TEXT NOT NULL,
+        delivered_at TEXT
     )
     """)
 
@@ -216,13 +276,36 @@ def seed_default_nodes_and_users():
     VALUES (?, ?, ?, ?, ?, ?)
     """, ("D-SQUARE_NODE_01", "Uttarakhand Slope Sector 4", 30.0668, 79.0193, now_str, "ONLINE"))
 
-    # Default rescue team user
-    cursor.execute("SELECT COUNT(*) FROM users WHERE username = 'admin'")
-    if cursor.fetchone()[0] == 0:
+    # Default rescue team user & registered citizens
+    cursor.execute("SELECT COUNT(*) FROM users")
+    if cursor.fetchone()[0] <= 1:
         cursor.execute("""
-        INSERT INTO users (username, password_hash, role, email, phone)
-        VALUES ('admin', 'admin123_hash', 'RESCUE_TEAM', 'rescue@dsquare.org', '+919876543210')
+        INSERT OR REPLACE INTO users (user_id, username, password_hash, role, email, phone, latitude, longitude, app_installed, sms_subscribed, whatsapp_subscribed)
+        VALUES ('USR_001', 'admin', 'admin123_hash', 'RESCUE_TEAM', 'rescue@dsquare.org', '+919876543210', 19.0760, 72.8777, 1, 1, 1)
         """)
+        citizens = [
+            ('USR_002', 'aarav_sharma', 'pass123', 'CITIZEN', 'aarav@example.com', '+919811122233', 19.0800, 72.8800, 1, 1, 1),
+            ('USR_003', 'priya_patel', 'pass123', 'CITIZEN', 'priya@example.com', '+919822233344', 19.0820, 72.8850, 1, 1, 0),
+            ('USR_004', 'rajesh_kumar', 'pass123', 'CITIZEN', 'rajesh@example.com', '+919833344455', 30.0680, 79.0200, 0, 1, 1),
+            ('USR_005', 'sunita_verma', 'pass123', 'CITIZEN', 'sunita@example.com', '+919844455566', 30.0700, 79.0250, 1, 0, 1)
+        ]
+        cursor.executemany("""
+        INSERT OR REPLACE INTO users (user_id, username, password_hash, role, email, phone, latitude, longitude, app_installed, sms_subscribed, whatsapp_subscribed)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, citizens)
+
+    # Seed Rescue Teams
+    cursor.execute("SELECT COUNT(*) FROM rescue_teams")
+    if cursor.fetchone()[0] == 0:
+        teams_data = [
+            ("TEAM_NDRF_01", "NDRF Alpha Squad", "NDRF_RESCUE", 19.0750, 72.8750, "AVAILABLE", None),
+            ("TEAM_BOAT_02", "Coast Guard Boat Unit 2", "BOAT_RESCUE", 19.0850, 72.8900, "AVAILABLE", None),
+            ("TEAM_FIRE_01", "City Fire Tenders Unit", "FIRE_ENGINE", 30.0650, 79.0180, "AVAILABLE", None)
+        ]
+        cursor.executemany("""
+        INSERT INTO rescue_teams (team_id, team_name, team_type, latitude, longitude, status, assigned_alert_id)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+        """, teams_data)
 
     # Seed Emergency Shelters
     cursor.execute("SELECT COUNT(*) FROM shelters")
