@@ -1100,33 +1100,22 @@
       }
     }
 
+    function openSOSModal() {
+      const modal = new bootstrap.Modal(document.getElementById('sosModal'));
+      modal.show();
+    }
+
+    function executeSOS() {
+      const disasterType = document.getElementById("sos-disaster-type")?.value || "Landslide";
+      const targetUrl = `/pc_sos_alert?disaster_type=${encodeURIComponent(disasterType)}&severity=CRITICAL&lat=30.0668&lon=79.0193&area=${encodeURIComponent("Uttarakhand High-Altitude Sector")}&auto_dispatch=true`;
+      window.location.href = targetUrl;
+    }
+
     async function sendResultToSOSSystem() {
       const disasterType = document.getElementById("fusion-disaster-select")?.value || "LANDSLIDE";
-      const affectedCount = currentAnalysisResult?.affected_pixels_count || 84;
       const area = currentAnalysisResult?.affected_area_km2 || 0.0336;
-      const confidence = currentAnalysisResult?.confidence || 94.8;
-
-      try {
-        const res = await fetch(`${PRIMARY_BACKEND}/api/v1/send-to-sos`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            disaster_type: disasterType,
-            severity: "CRITICAL",
-            affected_pixels_count: affectedCount,
-            affected_area_km2: area,
-            confidence: confidence,
-            latitude: 30.0668,
-            longitude: 79.0193
-          })
-        }).then(r => r.json());
-
-        if (res && res.status === "success") {
-          alert(`🚨 SOS ALERT DISPATCHED TO D-SQUARE EMERGENCY SYSTEM!\n\nAlert ID: ${res.sos_alert_id}\nDisaster: ${disasterType}\nAffected Area: ${area} km²\nConfidence: ${confidence}%`);
-        }
-      } catch (err) {
-        alert("🚨 SOS Alert Dispatched to Emergency Center");
-      }
+      const targetUrl = `/pc_sos_alert?disaster_type=${encodeURIComponent(disasterType)}&severity=CRITICAL&lat=30.0668&lon=79.0193&area=${encodeURIComponent(`Satellite ML Fusion ${disasterType} Zone (${area} km²)`)}&auto_dispatch=true`;
+      window.location.href = targetUrl;
     }
 
     let currentPixelPolygonLayer = null;

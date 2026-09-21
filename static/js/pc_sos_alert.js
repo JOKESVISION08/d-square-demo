@@ -14,7 +14,43 @@ document.addEventListener("DOMContentLoaded", function () {
   initMap();
   fetchLiveDisasterPixels();
   setupEventListeners();
+  parseIncomingURLParameters();
 });
+
+function parseIncomingURLParameters() {
+  const urlParams = new URLSearchParams(window.location.search);
+  const paramDisaster = urlParams.get("disaster_type") || urlParams.get("disaster");
+  const paramSeverity = urlParams.get("severity");
+  const paramLat = urlParams.get("lat") || urlParams.get("latitude");
+  const paramLon = urlParams.get("lon") || urlParams.get("longitude");
+  const paramArea = urlParams.get("area") || urlParams.get("location");
+  const paramAuto = urlParams.get("auto_dispatch");
+
+  if (paramDisaster) {
+    const sel = document.getElementById("disaster-type-select");
+    if (sel) {
+      sel.value = paramDisaster.toUpperCase();
+      activeDisasterType = paramDisaster.toUpperCase();
+    }
+  }
+  if (paramSeverity) {
+    const classVal = paramSeverity.toUpperCase();
+    const sevEl = document.getElementById("severity-level-select");
+    if (sevEl) sevEl.value = classVal.includes("CRIT") ? "CRITICAL" : (classVal.includes("HIGH") ? "HIGH" : "MEDIUM");
+  }
+  if (paramArea) {
+    const areaEl = document.getElementById("zone-location-input");
+    if (areaEl) areaEl.value = paramArea;
+  }
+  if (paramLat && paramLon && map) {
+    const lat = parseFloat(paramLat);
+    const lon = parseFloat(paramLon);
+    map.setView([lat, lon], 13);
+  }
+  if (paramAuto === "true" || paramAuto === "1") {
+    setTimeout(triggerParallelSOSFromPC, 600);
+  }
+}
 
 function initMap() {
   // Center on Mumbai Coastal Restricted Zone by default

@@ -1416,6 +1416,23 @@ def api_v1_send_to_sos():
     })
 
 
+
+
+
+@app.route("/api/sos/active_parallel_alerts", methods=["GET"])
+def api_sos_active_parallel_alerts():
+    """
+    Returns latest active parallel SOS alerts for D-SQUARE GPT and Rescue GPT.
+    """
+    alerts = get_active_parallel_alerts(limit=5)
+    return jsonify({
+        "status": "success",
+        "count": len(alerts),
+        "alerts": alerts
+    })
+
+
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5001, debug=True)
+
 

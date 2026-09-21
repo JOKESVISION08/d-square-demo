@@ -13,7 +13,28 @@ document.addEventListener("DOMContentLoaded", () => {
   initRescueMap();
   calculateSurvivalProb();
   fetchRescueOperationsSummary();
+  checkActiveRescueSOSAlert();
+  setInterval(checkActiveRescueSOSAlert, 5000);
 });
+
+function checkActiveRescueSOSAlert() {
+  fetch("/api/sos/active_parallel_alerts")
+    .then((res) => res.json())
+    .then((data) => {
+      if (data.status === "success" && data.count > 0) {
+        const alert = data.alerts[0];
+        const rescue = alert.rescue_payload || {};
+        const loc = rescue.location || {};
+        
+        let alertBadge = document.getElementById("data-mode-badge");
+        if (alertBadge) {
+          alertBadge.className = "badge bg-danger px-3 py-2 fw-bold";
+          alertBadge.innerHTML = `<i class="fa-solid fa-triangle-exclamation me-1"></i> ACTIVE PARALLEL SOS: ${alert.disaster_type} (${alert.severity})`;
+        }
+      }
+    })
+    .catch((err) => console.log("Rescue GPT alert listener:", err));
+}
 
 function initRescueMap() {
   const mapEl = document.getElementById("rescue-map");
