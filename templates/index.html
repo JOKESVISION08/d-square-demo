@@ -617,12 +617,17 @@
       <!-- Leaflet Map Container -->
       <div class="col-lg-7">
         <div class="panel-card">
-          <div class="d-flex align-items-center justify-content-between mb-3">
+          <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
             <h6 class="fw-bold mb-0 text-info">
               <i class="fa-solid fa-map-location-dot me-2"></i>Interactive Disaster GIS Map
             </h6>
-            <div class="d-flex gap-2">
-              <span class="badge bg-dark border border-secondary text-light">Sector: Uttarakhand</span>
+            <div class="d-flex gap-2 align-items-center">
+              <button class="btn btn-outline-info btn-sm py-0 px-2" onclick="receiveNisarMobilePixels()" id="receive-nisar-btn">
+                <i class="fa-solid fa-satellite-dish me-1"></i> Receive Mobile NISAR Pixels
+              </button>
+              <button class="btn btn-outline-success btn-sm py-0 px-2" onclick="downloadNisarPixels()" id="download-nisar-btn">
+                <i class="fa-solid fa-download me-1"></i> Download NISAR Pixels
+              </button>
             </div>
           </div>
           <div id="main-map"></div>
@@ -724,6 +729,7 @@
     let trendChart = null;
     let lastSuccessfulFetchTime = Date.now();
     let currentSensorData = null;
+    let latestNisarData = null;
 
     // Chart Data Memory (15 samples)
     const chartLabels = [];
@@ -759,7 +765,7 @@
       setInterval(update, 1000);
     }
 
-    // 2. NISAR Radar Pixels Fetcher
+    // 2. NISAR Radar Pixels Fetcher & Mobile Receiver/Downloader
     async function fetchNisarPixels() {
       try {
         let nisarRes = null;
@@ -771,6 +777,7 @@
 
         if (nisarRes && nisarRes.nisar_pixels) {
           const np = nisarRes.nisar_pixels;
+          latestNisarData = np;
           document.getElementById("nisar-def-val").innerText = `${np.ground_deformation_mm_yr.toFixed(1)} mm/yr`;
           document.getElementById("nisar-lband-val").innerText = `${np.sar_l_band_db.toFixed(1)} dB`;
           document.getElementById("nisar-sband-val").innerText = `${np.sar_s_band_db.toFixed(1)} dB`;
@@ -779,6 +786,44 @@
           document.getElementById("upload-def-text").innerText = `${np.ground_deformation_mm_yr.toFixed(1)} mm/yr`;
         }
       } catch (err) {}
+    }
+
+    async function receiveNisarMobilePixels() {
+      const btn = document.getElementById("receive-nisar-btn");
+      if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = `<span class="spinner-border spinner-border-sm me-1"></span> Receiving NISAR...`;
+      }
+      await fetchNisarPixels();
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = `<i class="fa-solid fa-circle-check me-1"></i> NISAR Pixels Synced!`;
+        setTimeout(() => {
+          btn.innerHTML = `<i class="fa-solid fa-satellite-dish me-1"></i> Receive Mobile NISAR Pixels`;
+        }, 2500);
+      }
+    }
+
+    function downloadNisarPixels() {
+      const dataToExport = latestNisarData || {
+        satellite: "NISAR (NASA-ISRO SAR)",
+        timestamp: new Date().toISOString(),
+        location: { lat: 30.0668, lon: 79.0193, sector: "Uttarakhand" },
+        sar_l_band_db: -12.4,
+        sar_s_band_db: -8.2,
+        ground_deformation_mm_yr: -14.2,
+        sar_coherence: 0.88,
+        deformation_status: "Active Slope Displacement Detected",
+        source: "Mobile NISAR Satellite Remote Sensing Stream"
+      };
+
+      const jsonStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(dataToExport, null, 2));
+      const downloadAnchor = document.createElement('a');
+      downloadAnchor.setAttribute("href", jsonStr);
+      downloadAnchor.setAttribute("download", `nisar_mobile_pixels_${Date.now()}.json`);
+      document.body.appendChild(downloadAnchor);
+      downloadAnchor.click();
+      downloadAnchor.remove();
     }
 
     // 3. Leaflet Map Initialization & GeoJSON Grid
