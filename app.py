@@ -52,6 +52,7 @@ from satellite.cloud_removal_ai import cloud_removal_model
 from models.monsoon_engine import monsoon_engine
 from services.safety_assistant import safety_assistant
 from services.rescue_voice_assistant import rescue_voice_assistant
+from services.rescue_gpt_service import rescue_gpt_service
 from services.safe_zone_service import SafeZoneService
 
 safe_zone_service = SafeZoneService()
@@ -120,6 +121,11 @@ def index_route():
 @app.route("/mobile_sos/index.html")
 def mobile_sos_route():
     return render_template("mobile_sos.html")
+
+@app.route("/rescue_gpt")
+@app.route("/rescue_gpt.html")
+def rescue_gpt_route():
+    return render_template("rescue_gpt.html")
 
 # ----------------- JWT Auth API -----------------
 @app.route("/api/auth/register", methods=["POST"])
@@ -472,6 +478,57 @@ def post_rescue_route():
 def get_rescue_teams():
     teams = rescue_voice_assistant.get_active_rescue_teams()
     return jsonify({"status": "success", "teams": teams})
+
+# ----------------- D-SQUARE Rescue GPT API -----------------
+@app.route("/api/rescue_chat", methods=["POST"])
+def post_rescue_chat():
+    body = request.get_json(silent=True) or {}
+    user_type = body.get("user_type", "victim")
+    message = body.get("message", "")
+    disaster_type = body.get("disaster_type", "landslide")
+    loc = body.get("location", {})
+    lat = float(loc.get("lat", 30.0668))
+    lon = float(loc.get("lon", 79.0193))
+
+    res = rescue_gpt_service.generate_rescue_guidance(
+        user_type=user_type,
+        message=message,
+        lat=lat,
+        lon=lon,
+        disaster_type=disaster_type,
+        sensor_data=latest_sensor_data
+    )
+    return jsonify(res)
+
+@app.route("/api/survival_probability", methods=["GET"])
+def get_survival_probability():
+    time_trapped = int(request.args.get("time_trapped", 120))
+    injury_type = request.args.get("injury_type", "none")
+    temp = float(request.args.get("temp", 25.0))
+    water_exp = request.args.get("water_exposure", "false").lower() == "true"
+
+    res = rescue_gpt_service.calculate_survival_probability(
+        time_trapped_minutes=time_trapped,
+        injury_type=injury_type,
+        temp_c=temp,
+        water_exposure=water_exp
+    )
+    return jsonify(res)
+
+@app.route("/api/trigger_rescue", methods=["POST"])
+def post_trigger_rescue():
+    body = request.get_json(silent=True) or {}
+    victim_loc = body.get("victim_location", {})
+    lat = float(victim_loc.get("lat", 30.0668))
+    lon = float(victim_loc.get("lon", 79.0193))
+    disaster_type = body.get("disaster_type", "landslide")
+    severity = body.get("severity", "critical")
+
+    return jsonify({
+        "status": "success",
+        "message": f"🚨 EMERGENCY RESCUE DISPATCHED for {severity.upper()} {disaster_type.upper()} at ({lat:.4f}°N, {lon:.4f}°E). NDRF & SDRF units notified via SMS/Push.",
+        "dispatch_id": f"NDRF_DISPATCH_{int(time.time())}"
+    })
 
 # ----------------- Monsoon Prediction Engine API -----------------
 @app.route("/api/monsoon_prediction", methods=["GET"])

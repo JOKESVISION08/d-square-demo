@@ -1,0 +1,82 @@
+[
+  {
+    "id": "LANDSLIDE_VICTIM_01",
+    "user_type": "victim",
+    "disaster_type": "landslide",
+    "user_message": "I'm trapped under debris after a slope collapse. What should I do?",
+    "ai_response": "🚨 LANDSLIDE RESCUE GUIDANCE\n\nSTAY CALM. Follow these critical survival steps:\n\n1. CHECK INJURIES: Are you bleeding or experiencing crush injuries? Apply firm pressure with cloth if bleeding.\n2. SIGNAL FOR HELP: Tap on pipes/walls 3 times every 5 minutes (rescuers listen for this rhythmic pattern).\n3. CONSERVE RESOURCES: Minimize phone screen usage to save battery. Stay warm.\n4. LOCATION: GPS shared with NDRF (12.97°N, 77.59°E ✅). Nearest team 1.2km away (ETA 15 min).\n5. DO NOT: Do NOT light matches (gas leak risk) or shout continuously.\n\nRescue Team Alpha notified. Type 'UPDATE' for status.",
+    "actions": ["notify_rescue_team", "share_location", "call_112_recommended"]
+  },
+  {
+    "id": "FLOOD_VICTIM_01",
+    "user_type": "victim",
+    "disaster_type": "flood",
+    "user_message": "Water is rising in my house. Should I evacuate now?",
+    "ai_response": "🌊 FLOOD EVACUATION ADVISORY\n\nCURRENT SITUATION:\n- Water level rising at 5cm/hour (Current: 1.2m)\n- Nearest high ground: Community Hall (400m West)\n- Rescue boat ETA: 18 minutes\n\nIMMEDIATE ACTIONS:\n1. Move to highest floor/roof immediately.\n2. DO NOT enter floodwater (contamination & electrical hazards).\n3. Wave a bright-colored cloth to signal rescue craft.\n4. Gather phone, flashlight, water, and medications.\n\nEVACUATION ROUTE:\n📍 Your location: 12.97°N, 77.59°E\n🛣️ Route: Exit house → Turn left at temple → Follow main road → Community Hall\n⚠️ Hazard: Flooded intersection 200m ahead. Use alternate School Road route.",
+    "actions": ["dispatch_rescue_boat", "share_safe_zone", "track_water_level"]
+  },
+  {
+    "id": "FIRE_VICTIM_01",
+    "user_type": "victim",
+    "disaster_type": "fire",
+    "user_message": "There's heavy smoke in the hallway and fire near the exit. How do I get out?",
+    "ai_response": "🔥 FIRE & SMOKE ESCAPE GUIDANCE\n\nACT IMMEDIATELY:\n1. CRAWL LOW under the smoke (cleaner air is near the floor).\n2. COVER NOSE & MOUTH with a wet cloth or shirt.\n3. TEST DOORS: Touch door handles with back of hand before opening. If hot, DO NOT open.\n4. ALTERNATE EXIT: Move toward secondary window/balcony if main exit is blocked.\n5. STOP, DROP, & ROLL if clothing catches fire.\n\nFire response units dispatched. ETA: 6 minutes. Call 112 if trapped in room.",
+    "actions": ["call_112_recommended", "dispatch_fire_service", "share_escape_route"]
+  },
+  {
+    "id": "EARTHQUAKE_VICTIM_01",
+    "user_type": "victim",
+    "disaster_type": "earthquake",
+    "user_message": "Ground was shaking violently and walls cracked. What is the safest position?",
+    "ai_response": "🧱 EARTHQUAKE AFTERSHOCK ADVISORY\n\nFOLLOW 'DROP, COVER, HOLD ON':\n1. DROP to your hands and knees immediately.\n2. COVER your head and neck under a sturdy table or desk.\n3. HOLD ON until shaking stops.\n4. DO NOT use elevators. Use stairs once shaking ceases.\n5. OUTDOORS: Move away from buildings, trees, and power lines.\n\nCheck for gas leaks and shut main valves. Standby for aftershock warnings.",
+    "actions": ["check_structural_damage", "check_gas_leak", "share_aftershock_status"]
+  },
+  {
+    "id": "MULTI_DISASTER_01",
+    "user_type": "victim",
+    "disaster_type": "multi_disaster",
+    "user_message": "An earthquake caused a gas pipe fire and slope crack behind my home. Help!",
+    "ai_response": "🚨 COMPOUND DISASTER EMERGENCY\n\nIMMEDIATE SURVIVAL PROTOCOL:\n1. EVACUATE HORIZONTALLY: Move perpendicular to the slope crack immediately.\n2. SMOKE AVOIDANCE: Stay upwind from the gas fire to avoid toxic fumes.\n3. SAFE DISTANCE: Stay at least 200m away from unstable structures and gas lines.\n4. GPS TRACKING: Location 12.971°N, 77.592°E sent to NDRF Command.\n\nEmergency dispatch initiated. Move toward open park sector.",
+    "actions": ["dispatch_ndrf_combined", "share_evacuation_map", "call_112_recommended"]
+  },
+  {
+    "id": "RESCUE_TEAM_ROUTE_01",
+    "user_type": "rescue_team",
+    "disaster_type": "landslide",
+    "user_message": "What's the fastest route to victim at 12.97°N, 77.59°E?",
+    "ai_response": "🚑 RESCUE ROUTE OPTIMIZATION\n\nVICTIM LOCATION: 12.9716°N, 77.5946°E\nYOUR LOCATION: 1.2 km Southwest\n\nOPTIMAL ROUTE:\n1. Head Northeast on Main Road (600m)\n2. Turn left at Temple Street (300m)\n3. Continue straight on Hill Road (300m)\n4. Destination on right (collapsed building, red marker)\n\n⏱️ ETA: 12 minutes | 🛣️ Distance: 1.2 km\n\n⚠️ HAZARDS:\n- Flooded intersection at 800m (water depth: 1.5m). DO NOT cross.\n- Unstable slope at 1km (Landslide Risk: CRITICAL).\n\n💡 AI SUGGESTION: Take alternate route via School Road (+2 min, avoids flood zone).\n\nVICTIM STATUS: Conscious, leg injury, structural stability 40%.",
+    "actions": ["optimize_route", "avoid_hazards", "track_victim_vitals"]
+  },
+  {
+    "id": "RESCUE_TEAM_SITUATION_01",
+    "user_type": "rescue_team",
+    "disaster_type": "landslide",
+    "user_message": "What's the situation report at Landslide Site Alpha?",
+    "ai_response": "🏔️ LANDSLIDE SITE ALPHA - SITUATION REPORT\n\nSENSOR DATA (D-SQUARE IoT Nodes):\n- Soil moisture: 92% (CRITICAL - secondary slide risk)\n- Slope angle: 38° (unstable)\n- Vibration: 14.8 m/s² (moderate tremor)\n\nVICTIMS:\n- 4 confirmed trapped (Building A, ground floor)\n- 2 missing (Building B, status unknown)\n- Survival probability: 72% (dropping 5%/hour)\n\nSAFETY ADVISORY:\n- ❌ DO NOT approach from South side (active slide zone).\n- ✅ Use North access route (stable ground).\n- ⚠️ Secondary collapse risk: HIGH (wear helmets, use shoring).\n\nRECOMMENDED EQUIPMENT: Hydraulic jacks, life detector radar, oxygen kits.",
+    "actions": ["display_iot_telemetry", "recommend_gear", "deploy_drone_survey"]
+  },
+  {
+    "id": "VICTIM_BLEEDING_01",
+    "user_type": "victim",
+    "disaster_type": "landslide",
+    "user_message": "I'm bleeding heavily from my leg under a fallen beam.",
+    "ai_response": "🩸 EMERGENCY FIRST-AID GUIDANCE\n\n1. DIRECT PRESSURE: Press a clean cloth/shirt firmly against the wound using both hands.\n2. ELEVATE: Raise the leg above heart level if movement is possible without severe pain.\n3. TOURNIQUET (If severe arterial spurting): Bind a cloth 2 inches above the wound tightly with a stick.\n4. DO NOT remove embedded objects.\n\nMedical team notified of heavy hemorrhage. ETA: 8 minutes. Stay calm.",
+    "actions": ["notify_paramedics", "prioritize_triage", "call_112_recommended"]
+  },
+  {
+    "id": "VICTIM_HYPOTHERMIA_01",
+    "user_type": "victim",
+    "disaster_type": "flood",
+    "user_message": "I've been in cold floodwater for 3 hours and shivering uncontrollably.",
+    "ai_response": "🥶 HYPOTHERMIA RISK ADVISORY\n\n1. GET OUT OF WATER: Climb onto furniture, car roof, or high ground.\n2. REMOVE WET CLOTHES: Wrap in dry blankets, towels, or plastic sheeting.\n3. BODY HEAT: Huddle closely with others if present.\n4. WARM DRINKS: Drink warm clean water if conscious. Avoid alcohol.\n\nBoat team updated to priority warm rescue. ETA: 10 minutes.",
+    "actions": ["dispatch_hypothermia_kit", "prioritize_triage", "share_location"]
+  },
+  {
+    "id": "RESCUE_TRIAGE_01",
+    "user_type": "rescue_team",
+    "disaster_type": "multi_disaster",
+    "user_message": "We have 10 victims across 3 buildings. How should we prioritize rescue?",
+    "ai_response": "📊 AI TRIAGE PRIORITY MATRIX\n\n1. PRIORITY 1 (CRITICAL - Rescue within 30 min):\n   - Location: Building A (Trapped in water, hypothermia risk, survival chance 85% -> 40% in 1 hr)\n2. PRIORITY 2 (HIGH - Rescue within 90 min):\n   - Location: Building B (Crush injury to limb, stable shelter)\n3. PRIORITY 3 (STABLE):\n   - Location: Building C (Uninjured on upper floor)\n\nRECOMMENDED DEPLOYMENT:\n- Team Alpha -> Building A (Boat + Warmth kits)\n- Team Beta -> Building B (Hydraulic jacks)",
+    "actions": ["prioritize_triage", "assign_teams", "optimize_resources"]
+  }
+]

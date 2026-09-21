@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>D-SQUARE Rescue GPT - AI Virtual First Responder</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <style>
+    body { background-color: #0b1329; color: #e2e8f0; font-family: 'Segoe UI', Tahoma, sans-serif; }
+    .rescue-card { background: #172a46; border-radius: 12px; border: 1px solid #1e3a5f; padding: 18px; margin-bottom: 18px; }
+    .chat-container { height: 350px; overflow-y: auto; background: #0d1b2a; border-radius: 8px; padding: 12px; border: 1px solid #1e3a5f; }
+    .chat-bubble-user { background: #1e3a5f; color: #fff; padding: 10px 14px; border-radius: 14px 14px 2px 14px; margin-bottom: 10px; max-width: 80%; margin-left: auto; }
+    .chat-bubble-ai { background: #0f2b48; color: #38bdf8; border: 1px solid #0284c7; padding: 12px 16px; border-radius: 14px 14px 14px 2px; margin-bottom: 10px; max-width: 85%; white-space: pre-line; }
+    .btn-sos-large { background: linear-gradient(135deg, #ef4444, #b91c1c); color: white; font-weight: bold; border-radius: 10px; padding: 14px; border: none; font-size: 1.2rem; }
+    .btn-sos-large:hover { background: #991b1b; color: white; }
+    .role-btn.active { background: #0284c7 !important; border-color: #38bdf8 !important; }
+  </style>
+</head>
+<body>
+
+  <!-- Top Navigation Header -->
+  <nav class="navbar navbar-dark bg-dark border-bottom border-secondary px-3">
+    <div class="container-fluid">
+      <span class="navbar-brand fw-bold text-danger"><i class="fa-solid fa-user-shield me-2"></i>D-SQUARE Rescue GPT (AI First Responder)</span>
+      <div class="d-flex align-items-center gap-2">
+        <a href="tel:112" class="btn btn-danger btn-sm fw-bold"><i class="fa-solid fa-phone me-1"></i> CALL 112</a>
+        <span class="badge bg-danger" id="data-mode-badge">AI RESCUE ACTIVE</span>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container py-3">
+    <!-- Dual Role Toggle -->
+    <div class="row g-2 mb-3">
+      <div class="col-6">
+        <button class="btn btn-outline-info w-100 py-2 fw-bold role-btn active" id="btn-role-victim" onclick="setRole('victim')">
+          <i class="fa-solid fa-person-shelter me-2"></i> VICTIM / CIVILIAN MODE
+        </button>
+      </div>
+      <div class="col-6">
+        <button class="btn btn-outline-warning w-100 py-2 fw-bold role-btn" id="btn-role-rescue" onclick="setRole('rescue_team')">
+          <i class="fa-solid fa-truck-medical me-2"></i> NDRF RESCUE TEAM MODE
+        </button>
+      </div>
+    </div>
+
+    <!-- Main Grid -->
+    <div class="row g-3">
+      <!-- AI Chat Assistant Column -->
+      <div class="col-md-7">
+        <div class="rescue-card">
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <h6 class="text-info fw-bold mb-0" id="chat-title"><i class="fa-solid fa-robot me-2"></i>Rescue GPT Voice Assistant</h6>
+            <button class="btn btn-sm btn-outline-light" onclick="toggleVoiceOutput()"><i class="fa-solid fa-volume-high me-1"></i> Voice: <span id="voice-status">ON</span></button>
+          </div>
+
+          <!-- Chat Messages Container -->
+          <div class="chat-container mb-3" id="chat-box">
+            <div class="chat-bubble-ai">
+              🚨 <strong>D-SQUARE Rescue GPT Online</strong>. I am your AI Virtual First Responder. Speak or type your emergency situation for immediate survival instructions, hazard routing, and NDRF dispatch.
+            </div>
+          </div>
+
+          <!-- Input Bar with Speech Recognition -->
+          <div class="input-group">
+            <button class="btn btn-secondary" onclick="startSpeechRecognition()" title="Speak Command"><i class="fa-solid fa-microphone text-warning"></i></button>
+            <input type="text" class="form-control bg-dark text-white border-secondary" id="user-input" placeholder="Describe emergency or ask guidance..." onkeypress="if(event.key==='Enter') sendRescueQuery()">
+            <button class="btn btn-info fw-bold" onclick="sendRescueQuery()"><i class="fa-solid fa-paper-plane me-1"></i> Send</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Live Hazard Map & Survival Probability Widget -->
+      <div class="col-md-5">
+        <!-- Survival Estimator Widget -->
+        <div class="rescue-card">
+          <h6 class="text-warning fw-bold mb-2"><i class="fa-solid fa-heart-pulse me-2"></i>Survival Probability Calculator</h6>
+          <div class="row g-2 small mb-2">
+            <div class="col-6">
+              <label class="text-muted">Time Trapped (min):</label>
+              <input type="number" class="form-control form-control-sm bg-dark text-white border-secondary" id="trapped-time" value="120" onchange="calculateSurvivalProb()">
+            </div>
+            <div class="col-6">
+              <label class="text-muted">Injury Type:</label>
+              <select class="form-select form-select-sm bg-dark text-white border-secondary" id="injury-type" onchange="calculateSurvivalProb()">
+                <option value="none">None / Uninjured</option>
+                <option value="bleeding">Hemorrhage / Bleeding</option>
+                <option value="crush">Crush Injury / Fracture</option>
+              </select>
+            </div>
+          </div>
+          <div class="p-2 bg-black rounded border border-warning text-center">
+            <div class="small text-muted">Estimated Survival Probability:</div>
+            <div class="fs-3 fw-bold text-success" id="survival-score">88.0%</div>
+            <div class="small text-warning" id="survival-rec">Conserve phone battery and stay warm.</div>
+          </div>
+        </div>
+
+        <!-- Evacuation Route Map Card -->
+        <div class="rescue-card p-2">
+          <h6 class="text-info fw-bold mb-2 px-1"><i class="fa-solid fa-map-location-dot me-2"></i>Hazard-Avoidance Route Map</h6>
+          <div id="rescue-map" style="height: 200px; border-radius: 8px;"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="/static/js/rescue_gpt.js"></script>
+</body>
+</html>
