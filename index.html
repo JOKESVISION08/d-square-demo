@@ -612,19 +612,16 @@
       </div>
     </div>
 
-    <!-- Main Content Row: Leaflet Map with GeoJSON Risk Layer & Telemetry Trend -->
+    <!-- Main Content Row: GIS Disaster Map & Telemetry Trend -->
     <div class="row g-3">
       <!-- Leaflet Map Container -->
       <div class="col-lg-7">
         <div class="panel-card">
           <div class="d-flex align-items-center justify-content-between mb-3">
             <h6 class="fw-bold mb-0 text-info">
-              <i class="fa-solid fa-map-location-dot me-2"></i>Live Ground Node &amp; Spatial Risk GeoJSON Grid
+              <i class="fa-solid fa-map-location-dot me-2"></i>Interactive Disaster GIS Map
             </h6>
             <div class="d-flex gap-2">
-              <button class="btn btn-outline-info btn-sm py-0 px-2" onclick="toggleRiskGrid()">
-                <i class="fa-solid fa-layer-group me-1"></i> Toggle Risk Grid
-              </button>
               <span class="badge bg-dark border border-secondary text-light">Sector: Uttarakhand</span>
             </div>
           </div>
@@ -724,8 +721,6 @@
 
     let map = null;
     let nodeMarker = null;
-    let riskGridLayer = null;
-    let showRiskGrid = true;
     let trendChart = null;
     let lastSuccessfulFetchTime = Date.now();
     let currentSensorData = null;
@@ -744,10 +739,9 @@
       fetchTelemetryData();
       setInterval(fetchTelemetryData, 2000);
 
-      // Fetch NISAR Radar Pixels, Multi-Modal Fusion and GeoJSON Risk Grid
+      // Fetch NISAR Radar Pixels and Multi-Modal Fusion
       fetchNisarPixels();
       fetchFusionAnalysis();
-      fetchRiskGridMap();
 
       // Live 1s freshness counter update
       setInterval(updateFreshnessTimer, 1000);
@@ -809,54 +803,6 @@
       shelter2.bindPopup("<b>Safe Shelter Center B</b><br>Gopeshwar Disaster Relief HQ");
     }
 
-    async function fetchRiskGridMap() {
-      try {
-        let gridData = null;
-        try {
-          gridData = await fetchWithTimeout(`${PRIMARY_BACKEND}/api/fusion/risk_map?region=Uttarakhand`, {}, 4000);
-        } catch (e1) {
-          gridData = await fetchWithTimeout(`${CLOUD_TUNNEL_FALLBACK}/api/fusion/risk_map?region=Uttarakhand`, {}, 4000);
-        }
-
-        if (gridData && gridData.features) {
-          if (riskGridLayer) map.removeLayer(riskGridLayer);
-
-          riskGridLayer = L.geoJSON(gridData, {
-            style: function(feature) {
-              return {
-                color: feature.properties.fill_color,
-                weight: 1.5,
-                fillColor: feature.properties.fill_color,
-                fillOpacity: 0.35
-              };
-            },
-            onEachFeature: function(feature, layer) {
-              const p = feature.properties;
-              layer.bindPopup(`
-                <div style="font-family: sans-serif;">
-                  <strong class="text-primary">${p.cell_id}</strong><br>
-                  Risk Score: <strong style="color:${p.fill_color}">${p.risk_score}% (${p.risk_level})</strong><br>
-                  Primary Hazard: <b>${p.primary_hazard}</b><br>
-                  NDVI Anomaly: ${p.ndvi_anomaly}<br>
-                  Soil Moisture: ${p.soil_moisture}
-                </div>
-              `);
-            }
-          });
-
-          if (showRiskGrid) riskGridLayer.addTo(map);
-        }
-      } catch (err) {}
-    }
-
-    function toggleRiskGrid() {
-      showRiskGrid = !showRiskGrid;
-      if (riskGridLayer) {
-        if (showRiskGrid) map.addLayer(riskGridLayer);
-        else map.removeLayer(riskGridLayer);
-      }
-    }
-
     // 4. Satellite Upload Handler & Automatic AI Disaster Predictor
     function onSatelliteUploadChange() {
       const prevFile = document.getElementById('prev-scene-input').files[0];
@@ -904,7 +850,6 @@
         if (res && res.status === "success") {
           statusText.innerText = "AI Analysis Complete";
           renderFusionUI(res);
-          fetchRiskGridMap();
         } else {
           statusText.innerText = "Ready for AI";
         }
