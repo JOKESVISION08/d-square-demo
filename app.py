@@ -136,6 +136,11 @@ def mobile_sos_route():
 def rescue_gpt_route():
     return render_template("rescue_gpt.html")
 
+@app.route("/mobile_camera")
+@app.route("/mobile_camera.html")
+def mobile_camera_route():
+    return render_template("mobile_camera.html")
+
 # ----------------- JWT Auth API -----------------
 @app.route("/api/auth/register", methods=["POST"])
 def auth_register():
