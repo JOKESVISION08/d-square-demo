@@ -126,6 +126,80 @@ def init_db():
     )
     """)
 
+    # Multi-Parameter Disaster Events Table
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS disaster_events (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        timestamp TEXT NOT NULL,
+        disaster_type TEXT NOT NULL,
+        severity TEXT NOT NULL,
+        confidence REAL NOT NULL,
+        latitude REAL NOT NULL,
+        longitude REAL NOT NULL,
+        location_name TEXT NOT NULL,
+        parameters_triggered TEXT NOT NULL,
+        recommended_actions TEXT NOT NULL
+    )
+    """)
+
+    # Parallel SOS Alerts Table (Rescue GPT + D-SQUARE GPT)
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS parallel_sos_alerts (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        timestamp TEXT NOT NULL,
+        disaster_type TEXT NOT NULL,
+        severity TEXT NOT NULL,
+        latitude REAL NOT NULL,
+        longitude REAL NOT NULL,
+        area_name TEXT NOT NULL,
+        affected_population INTEGER NOT NULL,
+        rescue_payload TEXT NOT NULL,
+        public_payload TEXT NOT NULL,
+        status TEXT NOT NULL DEFAULT 'DISPATCHED'
+    )
+    """)
+
+    # Emergency Shelters Table
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS shelters (
+        shelter_id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        address TEXT NOT NULL,
+        latitude REAL NOT NULL,
+        longitude REAL NOT NULL,
+        capacity INTEGER NOT NULL,
+        available_beds INTEGER NOT NULL,
+        contact_number TEXT NOT NULL,
+        facilities TEXT NOT NULL
+    )
+    """)
+
+    # Rescue Resources & Fleet Allocation Table
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS rescue_resources (
+        resource_id TEXT PRIMARY KEY,
+        resource_type TEXT NOT NULL,
+        assigned_area TEXT NOT NULL,
+        status TEXT NOT NULL DEFAULT 'AVAILABLE',
+        quantity INTEGER NOT NULL,
+        last_updated TEXT NOT NULL
+    )
+    """)
+
+    # Model Performance & Calibration Metrics Table
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS model_performance (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        timestamp TEXT NOT NULL,
+        model_name TEXT NOT NULL,
+        disaster_type TEXT NOT NULL,
+        precision_score REAL NOT NULL,
+        recall_score REAL NOT NULL,
+        f1_score REAL NOT NULL,
+        total_evaluations INTEGER NOT NULL
+    )
+    """)
+
     conn.commit()
     conn.close()
     seed_default_nodes_and_users()
@@ -150,8 +224,119 @@ def seed_default_nodes_and_users():
         VALUES ('admin', 'admin123_hash', 'RESCUE_TEAM', 'rescue@dsquare.org', '+919876543210')
         """)
 
+    # Seed Emergency Shelters
+    cursor.execute("SELECT COUNT(*) FROM shelters")
+    if cursor.fetchone()[0] == 0:
+        shelters_data = [
+            ("SHELTER_01", "School XYZ Community Hall & Relief Center", "124 High Ground Sector 4, Uttarakhand", 30.0820, 79.0310, 500, 320, "+91-1372-252100", "Medical Triage, Food Rations, Water, Generator"),
+            ("SHELTER_02", "Gopeshwar Disaster Relief HQ", "Gopeshwar Town Center, District Chamoli", 30.0500, 79.0050, 800, 550, "+91-1372-252200", "ICU Beds, Helicopter Pad, Amphibious Fleet, Solar Power"),
+            ("SHELTER_03", "Mumbai Coastal High Ground Refuge", "Marine Drive Relief Complex, Mumbai", 19.0910, 72.8920, 1000, 650, "+91-22-28491000", "NDRF Boat Docks, Triage Camp, Sanitation Kits")
+        ]
+        cursor.executemany("""
+        INSERT INTO shelters (shelter_id, name, address, latitude, longitude, capacity, available_beds, contact_number, facilities)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, shelters_data)
+
+    # Seed Rescue Resources Fleet
+    cursor.execute("SELECT COUNT(*) FROM rescue_resources")
+    if cursor.fetchone()[0] == 0:
+        resources_data = [
+            ("RES_BOAT_01", "Motorized Inflatable Rescue Boats", "Mumbai Coastal Zone", "DEPLOYED", 12, now_str),
+            ("RES_AMB_01", "Advanced Life Support Ambulances", "Uttarakhand Slope Sector 4", "AVAILABLE", 8, now_str),
+            ("RES_FIRE_01", "Heavy Foam Fire Tenders", "Chamoli Industrial Area", "STANDBY", 6, now_str),
+            ("RES_NDRF_01", "NDRF Search & Rescue Personnel Teams", "Gopeshwar HQ", "DEPLOYED", 45, now_str)
+        ]
+        cursor.executemany("""
+        INSERT INTO rescue_resources (resource_id, resource_type, assigned_area, status, quantity, last_updated)
+        VALUES (?, ?, ?, ?, ?, ?)
+        """, resources_data)
+
+    # Seed Model Performance Metrics
+    cursor.execute("SELECT COUNT(*) FROM model_performance")
+    if cursor.fetchone()[0] == 0:
+        cursor.execute("""
+        INSERT INTO model_performance (timestamp, model_name, disaster_type, precision_score, recall_score, f1_score, total_evaluations)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+        """, (now_str, "MultiParameterFusionModel_v2.0", "FLOOD_FIRE_LANDSLIDE", 0.925, 0.890, 0.907, 1250))
+
     conn.commit()
     conn.close()
+
+
+def save_parallel_sos_alert(alert_res: Dict[str, Any]) -> int:
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+    rescue = alert_res.get("rescue_gpt_alert", {})
+    public = alert_res.get("dsquare_gpt_alert", {})
+
+    loc = rescue.get("location", {})
+    lat = float(loc.get("latitude", 19.0760))
+    lon = float(loc.get("longitude", 72.8777))
+    area = loc.get("area_name", "Mumbai Coastal Restricted Zone")
+
+    cursor.execute("""
+    INSERT INTO parallel_sos_alerts (
+        timestamp, disaster_type, severity, latitude, longitude, area_name,
+        affected_population, rescue_payload, public_payload, status
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'DISPATCHED')
+    """, (
+        now_str,
+        rescue.get("disaster_type", "FLOOD"),
+        rescue.get("severity", "HIGH"),
+        lat,
+        lon,
+        area,
+        int(rescue.get("affected_population", 5000)),
+        json.dumps(rescue),
+        json.dumps(public)
+    ))
+
+    alert_id = cursor.lastrowid
+    conn.commit()
+    conn.close()
+    return alert_id
+
+
+def get_active_parallel_alerts(limit: int = 10) -> List[Dict[str, Any]]:
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+    SELECT * FROM parallel_sos_alerts
+    ORDER BY id DESC LIMIT ?
+    """, (limit,))
+    rows = cursor.fetchall()
+    conn.close()
+    
+    result = []
+    for r in rows:
+        item = dict(r)
+        try:
+            item["rescue_payload"] = json.loads(item["rescue_payload"])
+            item["public_payload"] = json.loads(item["public_payload"])
+        except Exception:
+            pass
+        result.append(item)
+    return result
+
+
+def get_shelters_list() -> List[Dict[str, Any]]:
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM shelters ORDER BY available_beds DESC")
+    rows = cursor.fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+
+def get_rescue_resources_list() -> List[Dict[str, Any]]:
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM rescue_resources ORDER BY last_updated DESC")
+    rows = cursor.fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
 
 
 def save_sensor_log(log_dict: Dict[str, Any]):
