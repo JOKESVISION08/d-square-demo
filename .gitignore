@@ -7,3 +7,7 @@ __pycache__/
 .write_test
 temp/
 tmp/
+uploads/
+outputs/
+*.db
+
