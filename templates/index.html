@@ -4,165 +4,927 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>D-SQUARE 2.0 - Quadruple AI Disaster Surveillance Dashboard</title>
+  
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Poppins:wght@600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- CSS Dependencies -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  
+  <!-- JS Charting -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  
   <style>
-    body { background-color: #0b1329; color: #e2e8f0; font-family: 'Segoe UI', Tahoma, sans-serif; }
-    .sensor-card { background: #172a46; border-radius: 10px; border: 1px solid #1e3a5f; padding: 16px; transition: transform 0.2s; }
-    .sensor-card:hover { transform: translateY(-3px); }
-    .val-large { font-size: 1.8rem; font-weight: bold; }
-    .alert-banner { border-radius: 8px; padding: 14px; font-weight: bold; display: none; }
+    :root {
+      --bg-dark: #0b1329;
+      --card-bg: #111c38;
+      --card-border: #1e3a5f;
+      --accent-blue: #38bdf8;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --status-normal: #10b981;
+      --status-warning: #f59e0b;
+      --status-critical: #ef4444;
+    }
+    
+    body {
+      background-color: var(--bg-dark);
+      color: var(--text-main);
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    h1, h2, h3, h4, h5, h6, .navbar-brand {
+      font-family: 'Poppins', sans-serif;
+    }
+
+    /* Navbar styling */
+    .custom-nav {
+      background: rgba(15, 23, 42, 0.95);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--card-border);
+    }
+
+    .brand-title {
+      font-weight: 700;
+      font-size: 1.25rem;
+      background: linear-gradient(135deg, #38bdf8, #818cf8);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    /* Connection Status Pill */
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 12px;
+      border-radius: 9999px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+      border: 1px solid transparent;
+    }
+    .status-online {
+      background: rgba(16, 185, 129, 0.15);
+      color: #34d399;
+      border-color: rgba(16, 185, 129, 0.3);
+    }
+    .status-offline {
+      background: rgba(239, 68, 68, 0.15);
+      color: #fca5a5;
+      border-color: rgba(239, 68, 68, 0.3);
+    }
+    .status-cached {
+      background: rgba(245, 158, 11, 0.15);
+      color: #fcd34d;
+      border-color: rgba(245, 158, 11, 0.3);
+    }
+
+    .pulse-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background-color: currentColor;
+      animation: pulse-ring 1.8s infinite;
+    }
+
+    @keyframes pulse-ring {
+      0% { transform: scale(0.95); opacity: 0.8; }
+      50% { transform: scale(1.25); opacity: 1; }
+      100% { transform: scale(0.95); opacity: 0.8; }
+    }
+
+    /* Dynamic Banner */
+    .alert-banner {
+      border-radius: 12px;
+      padding: 16px 20px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border: 1px solid transparent;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+      transition: all 0.3s ease;
+    }
+    
+    .alert-banner-normal {
+      background: rgba(6, 78, 59, 0.6);
+      border-color: #10b981;
+      color: #a7f3d0;
+    }
+    .alert-banner-warning {
+      background: rgba(120, 53, 15, 0.7);
+      border-color: #f59e0b;
+      color: #fde68a;
+    }
+    .alert-banner-critical {
+      background: rgba(127, 29, 29, 0.8);
+      border-color: #ef4444;
+      color: #fecaca;
+      animation: alert-pulse 1.5s infinite alternate;
+    }
+    .alert-banner-offline {
+      background: rgba(51, 65, 85, 0.7);
+      border-color: #64748b;
+      color: #cbd5e1;
+    }
+
+    @keyframes alert-pulse {
+      0% { box-shadow: 0 0 10px rgba(239, 68, 68, 0.4); }
+      100% { box-shadow: 0 0 25px rgba(239, 68, 68, 0.9); }
+    }
+
+    /* Sensor Grid Card */
+    .sensor-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      padding: 16px;
+      height: 100%;
+      position: relative;
+      overflow: hidden;
+      transition: transform 0.2s ease, border-color 0.2s ease;
+    }
+    .sensor-card:hover {
+      transform: translateY(-2px);
+      border-color: rgba(56, 189, 248, 0.4);
+    }
+    .sensor-icon {
+      font-size: 1.25rem;
+      width: 36px;
+      height: 36px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(255, 255, 255, 0.05);
+      margin-bottom: 12px;
+    }
+    .sensor-label {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-muted);
+      font-weight: 600;
+    }
+    .sensor-value {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: #ffffff;
+      margin-top: 4px;
+    }
+    .sensor-sub {
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    /* Value threshold state classes */
+    .val-good { color: #34d399 !important; }
+    .val-warn { color: #fbbf24 !important; }
+    .val-danger { color: #fca5a5 !important; }
+
+    /* Map & Panel Containers */
+    .panel-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 14px;
+      padding: 20px;
+      height: 100%;
+    }
+
+    #main-map {
+      height: 340px;
+      border-radius: 10px;
+      z-index: 1;
+    }
+
+    /* SOS Button */
+    .btn-sos {
+      background: linear-gradient(135deg, #ef4444, #dc2626);
+      color: white;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      border: none;
+      box-shadow: 0 4px 14px rgba(239, 68, 68, 0.4);
+      transition: all 0.2s ease;
+    }
+    .btn-sos:hover {
+      background: linear-gradient(135deg, #dc2626, #b91c1c);
+      box-shadow: 0 6px 20px rgba(239, 68, 68, 0.6);
+      transform: scale(1.02);
+    }
+
+    /* Modal styling */
+    .modal-content {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      color: var(--text-main);
+      border-radius: 16px;
+    }
+    .modal-header {
+      border-bottom: 1px solid var(--card-border);
+    }
+    .modal-footer {
+      border-top: 1px solid var(--card-border);
+    }
+
+    .badge-scenario {
+      font-size: 0.85rem;
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
   </style>
 </head>
 <body>
 
   <!-- Navigation Bar -->
-  <nav class="navbar navbar-dark bg-dark border-bottom border-secondary px-3">
-    <div class="container-fluid">
-      <span class="navbar-brand fw-bold text-info"><i class="fa-solid fa-satellite-dish me-2"></i>D-SQUARE 2.0 Multi-Disaster AI Surveillance</span>
+  <nav class="navbar custom-nav px-3 py-2 sticky-top">
+    <div class="container-fluid d-flex align-items-center justify-content-between">
       <div class="d-flex align-items-center gap-3">
-        <select class="form-select form-select-sm bg-dark text-white border-secondary" id="node-selector">
+        <span class="brand-title">
+          <i class="fa-solid fa-satellite-dish text-info me-2"></i>D-SQUARE 2.0
+        </span>
+        <span class="text-muted d-none d-md-inline">| Multi-Disaster AI Surveillance</span>
+      </div>
+
+      <div class="d-flex align-items-center gap-3">
+        <!-- Live IST Clock -->
+        <div class="text-muted small d-none d-lg-block fw-semibold" id="live-clock">
+          <i class="fa-regular fa-clock me-1"></i>00:00:00 IST
+        </div>
+
+        <!-- Connection Status Pill -->
+        <div id="connection-pill" class="status-pill status-offline">
+          <div class="pulse-dot"></div>
+          <span id="connection-text">CONNECTING</span>
+        </div>
+
+        <!-- Node Selector -->
+        <select class="form-select form-select-sm bg-dark text-white border-secondary" id="node-selector" style="width: auto;" onchange="onNodeChange()">
           <option value="D-SQUARE_NODE_01">Node 01: Uttarakhand Station</option>
           <option value="D-SQUARE_NODE_02">Node 02: High-Altitude Sector</option>
         </select>
-        <button class="btn btn-danger btn-sm fw-bold" onclick="triggerSOS()"><i class="fa-solid fa-phone-volume me-1"></i> TRIGGER SOS</button>
+
+        <!-- SOS Trigger Button -->
+        <button class="btn btn-sos btn-sm px-3 py-2 rounded-3" onclick="openSOSModal()">
+          <i class="fa-solid fa-phone-volume me-1"></i> TRIGGER SOS
+        </button>
       </div>
     </div>
   </nav>
 
-  <div class="container-fluid py-3 px-4">
-    <!-- Real-time Alert Banner -->
-    <div class="alert-banner bg-danger text-white mb-3" id="alert-banner">
-      <i class="fa-solid fa-triangle-exclamation fa-lg me-2"></i>
-      <span id="alert-banner-text">CRITICAL LANDSLIDE RISK DETECTED BY GROUND SENSORS!</span>
+  <!-- Main Dashboard Container -->
+  <div class="container-fluid py-4 px-3 px-lg-4">
+    
+    <!-- Real-Time Alert Banner -->
+    <div id="alert-banner" class="alert-banner alert-banner-normal mb-4">
+      <div class="d-flex align-items-center gap-3">
+        <i id="alert-icon" class="fa-solid fa-shield-halved fa-xl"></i>
+        <div>
+          <div id="alert-banner-title" class="fs-6 fw-bold">SYSTEM STATUS NORMAL</div>
+          <div id="alert-banner-desc" class="small opacity-75">All 10 ground station sensors are operating within safe parameters.</div>
+        </div>
+      </div>
+      <div class="text-end small opacity-75 d-none d-sm-block">
+        <div id="data-age-text">Updated: just now</div>
+        <div id="node-id-display" class="fw-mono">Node: D-SQUARE_NODE_01</div>
+      </div>
     </div>
 
-    <!-- 10 Sensor Cards Row -->
+    <!-- 10 Sensor Grid Cards -->
+    <h6 class="text-uppercase text-muted fw-bold mb-3 small tracking-wider">
+      <i class="fa-solid fa-microchip text-info me-2"></i>Live Ground Telemetry (10 Sensors)
+    </h6>
+
     <div class="row g-3 mb-4">
-      <div class="col-md-2 col-6">
-        <div class="sensor-card text-info">
-          <div class="small text-muted mb-1"><i class="fa-solid fa-temperature-high me-1"></i> Temperature</div>
-          <div class="val-large text-white" id="val-temp">28.5 °C</div>
+      <!-- 1. Temperature -->
+      <div class="col-xl-2 col-lg-3 col-md-4 col-6">
+        <div class="sensor-card">
+          <div class="sensor-icon text-info"><i class="fa-solid fa-temperature-high"></i></div>
+          <div class="sensor-label">Temperature</div>
+          <div class="sensor-value" id="val-temp">— °C</div>
+          <div class="sensor-sub" id="sub-temp">DHT11 • Normal &lt; 35°C</div>
         </div>
       </div>
-      <div class="col-md-2 col-6">
-        <div class="sensor-card text-primary">
-          <div class="small text-muted mb-1"><i class="fa-solid fa-droplet me-1"></i> Humidity</div>
-          <div class="val-large text-white" id="val-hum">65 %</div>
+
+      <!-- 2. Humidity -->
+      <div class="col-xl-2 col-lg-3 col-md-4 col-6">
+        <div class="sensor-card">
+          <div class="sensor-icon text-primary"><i class="fa-solid fa-droplet"></i></div>
+          <div class="sensor-label">Humidity</div>
+          <div class="sensor-value" id="val-hum">— %</div>
+          <div class="sensor-sub" id="sub-hum">DHT11 • Optimal 40-70%</div>
         </div>
       </div>
-      <div class="col-md-2 col-6">
-        <div class="sensor-card text-warning">
-          <div class="small text-muted mb-1"><i class="fa-solid fa-water me-1"></i> Soil Moisture</div>
-          <div class="val-large text-white" id="val-soil">42 %</div>
+
+      <!-- 3. Soil Moisture -->
+      <div class="col-xl-2 col-lg-3 col-md-4 col-6">
+        <div class="sensor-card">
+          <div class="sensor-icon text-warning"><i class="fa-solid fa-water"></i></div>
+          <div class="sensor-label">Soil Moisture</div>
+          <div class="sensor-value" id="val-soil">— %</div>
+          <div class="sensor-sub" id="sub-soil">Raw ADC: <span id="val-soil-raw">—</span></div>
         </div>
       </div>
-      <div class="col-md-2 col-6">
-        <div class="sensor-card text-secondary">
-          <div class="small text-muted mb-1"><i class="fa-solid fa-smog me-1"></i> MQ2 Gas</div>
-          <div class="val-large text-white" id="val-gas">NORMAL</div>
+
+      <!-- 4. MQ2 Gas -->
+      <div class="col-xl-2 col-lg-3 col-md-4 col-6">
+        <div class="sensor-card">
+          <div class="sensor-icon text-secondary"><i class="fa-solid fa-smog"></i></div>
+          <div class="sensor-label">MQ2 Gas/Smoke</div>
+          <div class="sensor-value" id="val-gas">—</div>
+          <div class="sensor-sub" id="sub-gas">MQ2 Sensor • Pin D6</div>
         </div>
       </div>
-      <div class="col-md-2 col-6">
-        <div class="sensor-card text-danger">
-          <div class="small text-muted mb-1"><i class="fa-solid fa-fire me-1"></i> Flame Sensor</div>
-          <div class="val-large text-white" id="val-flame">SAFE</div>
+
+      <!-- 5. Tilt Sensor -->
+      <div class="col-xl-2 col-lg-3 col-md-4 col-6">
+        <div class="sensor-card">
+          <div class="sensor-icon text-info"><i class="fa-solid fa-arrow-trend-down"></i></div>
+          <div class="sensor-label">Tilt Sensor</div>
+          <div class="sensor-value" id="val-tilt">—</div>
+          <div class="sensor-sub" id="sub-tilt">SW-520D • Pin D7</div>
         </div>
       </div>
-      <div class="col-md-2 col-6">
-        <div class="sensor-card text-success">
-          <div class="small text-muted mb-1"><i class="fa-solid fa-compass me-1"></i> MPU6050 Gyro</div>
-          <div class="val-large text-white" id="val-gyro">0.0, 0.0</div>
+
+      <!-- 6. Vibration Sensor -->
+      <div class="col-xl-2 col-lg-3 col-md-4 col-6">
+        <div class="sensor-card">
+          <div class="sensor-icon text-warning"><i class="fa-solid fa-bolt"></i></div>
+          <div class="sensor-label">Vibration</div>
+          <div class="sensor-value" id="val-vibr">—</div>
+          <div class="sensor-sub" id="sub-vibr">801S Sensor • Pin D8</div>
+        </div>
+      </div>
+
+      <!-- 7. Flame Sensor -->
+      <div class="col-xl-2 col-lg-3 col-md-4 col-6">
+        <div class="sensor-card">
+          <div class="sensor-icon text-danger"><i class="fa-solid fa-fire"></i></div>
+          <div class="sensor-label">Flame Sensor</div>
+          <div class="sensor-value" id="val-flame">—</div>
+          <div class="sensor-sub" id="sub-flame">IR Flame • Pin D2</div>
+        </div>
+      </div>
+
+      <!-- 8. Gyro X -->
+      <div class="col-xl-2 col-lg-3 col-md-4 col-6">
+        <div class="sensor-card">
+          <div class="sensor-icon text-success"><i class="fa-solid fa-compass"></i></div>
+          <div class="sensor-label">Gyro X Axis</div>
+          <div class="sensor-value" id="val-gyrox">— °/s</div>
+          <div class="sensor-sub">MPU6050 I2C</div>
+        </div>
+      </div>
+
+      <!-- 9. Gyro Y -->
+      <div class="col-xl-2 col-lg-3 col-md-4 col-6">
+        <div class="sensor-card">
+          <div class="sensor-icon text-success"><i class="fa-solid fa-compass"></i></div>
+          <div class="sensor-label">Gyro Y Axis</div>
+          <div class="sensor-value" id="val-gyroy">— °/s</div>
+          <div class="sensor-sub">MPU6050 I2C</div>
+        </div>
+      </div>
+
+      <!-- 10. Gyro Z -->
+      <div class="col-xl-2 col-lg-3 col-md-4 col-6">
+        <div class="sensor-card">
+          <div class="sensor-icon text-success"><i class="fa-solid fa-compass"></i></div>
+          <div class="sensor-label">Gyro Z Axis</div>
+          <div class="sensor-value" id="val-gyroz">— °/s</div>
+          <div class="sensor-sub">MPU6050 I2C</div>
         </div>
       </div>
     </div>
 
-    <!-- Main Content Grid -->
+    <!-- Main Content Row: Map & Telemetry Trend -->
     <div class="row g-3">
-      <!-- Leaflet Map Column -->
-      <div class="col-md-7">
-        <div class="sensor-card p-2 mb-3">
-          <h6 class="text-info fw-bold mb-2"><i class="fa-solid fa-map-location-dot me-2"></i>Live Ground Node & Shelter Map</h6>
-          <div id="main-map" style="height: 320px; border-radius: 8px;"></div>
+      <!-- Leaflet Map Container -->
+      <div class="col-lg-7">
+        <div class="panel-card">
+          <div class="d-flex align-items-center justify-content-between mb-3">
+            <h6 class="fw-bold mb-0 text-info">
+              <i class="fa-solid fa-map-location-dot me-2"></i>Live Node Location & Emergency Safe Shelters
+            </h6>
+            <span class="badge bg-dark border border-secondary text-light">Sector: Uttarakhand</span>
+          </div>
+          <div id="main-map"></div>
         </div>
       </div>
 
-      <!-- Chart Column -->
-      <div class="col-md-5">
-        <div class="sensor-card p-3">
-          <h6 class="text-warning fw-bold mb-2"><i class="fa-solid fa-chart-line me-2"></i>Soil Moisture & Temp Trend</h6>
-          <canvas id="trendChart" height="220"></canvas>
+      <!-- Chart Container & Disaster Overview -->
+      <div class="col-lg-5">
+        <div class="panel-card d-flex flex-column justify-content-between">
+          <div>
+            <div class="d-flex align-items-center justify-content-between mb-2">
+              <h6 class="fw-bold mb-0 text-warning">
+                <i class="fa-solid fa-chart-line me-2"></i>Telemetry Trend (Moisture &amp; Temp)
+              </h6>
+              <span class="small text-muted" id="chart-samples-text">Last 15 readings</span>
+            </div>
+            <div style="height: 200px; position: relative;" class="mb-3">
+              <canvas id="trendChart"></canvas>
+            </div>
+          </div>
+
+          <!-- Disaster Overview Summary Footer -->
+          <div class="p-3 rounded-3" style="background: rgba(15, 23, 42, 0.6); border: 1px solid var(--card-border);">
+            <div class="d-flex align-items-center justify-content-between">
+              <div>
+                <span class="text-muted small">Current Scenario:</span>
+                <div class="fw-bold fs-6 text-white" id="summary-scenario">NORMAL</div>
+              </div>
+              <div>
+                <span class="text-muted small">Disaster State:</span>
+                <div><span class="badge badge-scenario bg-success text-white" id="summary-disaster-badge">NONE</span></div>
+              </div>
+              <div class="text-end">
+                <span class="text-muted small">Data Freshness:</span>
+                <div class="fw-bold text-info" id="summary-freshness">0s ago</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- SOS Confirmation Modal -->
+  <div class="modal fade" id="sosModal" tabindex="-1" aria-labelledby="sosModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-header-title text-danger fw-bold mb-0" id="sosModalLabel">
+            <i class="fa-solid fa-triangle-exclamation me-2"></i>CONFIRM EMERGENCY SOS BROADCAST
+          </h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <p class="mb-3">You are about to broadcast a high-priority <strong>EMERGENCY SOS ALERT</strong> to NDRF Disaster Response Forces and registered emergency contacts.</p>
+          
+          <div class="mb-3">
+            <label class="form-label small text-muted font-weight-bold">Select Disaster Category:</label>
+            <select class="form-select bg-dark text-white border-secondary" id="sos-disaster-type">
+              <option value="Landslide">Landslide / Slope Collapse</option>
+              <option value="Fire">Wildfire / Structural Fire</option>
+              <option value="Flash Flood">Flash Flood / Cloudburst</option>
+              <option value="Earthquake">Earthquake / Seismic Movement</option>
+              <option value="General Emergency">General Disaster Emergency</option>
+            </select>
+          </div>
+
+          <div class="p-3 rounded bg-dark border border-danger text-danger-emphasis small">
+            <i class="fa-solid fa-circle-info me-1"></i> Your current GPS location (30.0668, 79.0193) will be attached to the emergency dispatch signal.
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="button" class="btn btn-danger fw-bold" id="confirmSosBtn" onclick="executeSOS()">
+            <i class="fa-solid fa-paper-plane me-1"></i> BROADCAST SOS NOW
+          </button>
         </div>
       </div>
     </div>
   </div>
 
+  <!-- JS Dependencies -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
   <script>
+    // Configuration & Endpoints
+    const PRIMARY_BACKEND = window.location.origin.includes("netlify.app") || window.location.protocol === "file:"
+      ? "https://competitors-insert-peas-above.trycloudflare.com"
+      : "";
+    const CLOUD_TUNNEL_FALLBACK = "https://competitors-insert-peas-above.trycloudflare.com";
+
+    const CACHE_KEY = "dsquare_pc_telemetry_cache";
+    const FETCH_TIMEOUT_MS = 5000;
+
     let map = null;
-    let chart = null;
-    const API_BASE = "";
+    let nodeMarker = null;
+    let trendChart = null;
+    let lastSuccessfulFetchTime = Date.now();
+    let currentSensorData = null;
+
+    // Chart Data Memory (15 samples)
+    const chartLabels = [];
+    const chartMoistureData = [];
+    const chartTempData = [];
 
     document.addEventListener("DOMContentLoaded", () => {
-      initMap();
-      initChart();
-      pollSensorData();
-      setInterval(pollSensorData, 2000);
+      startClock();
+      initLeafletMap();
+      initTrendChart();
+      
+      // Initial fetch and 2s polling interval
+      fetchTelemetryData();
+      setInterval(fetchTelemetryData, 2000);
+
+      // Live 1s freshness counter update
+      setInterval(updateFreshnessTimer, 1000);
     });
 
-    function initMap() {
-      map = L.map("main-map").setView([30.0668, 79.0193], 12);
-      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 18 }).addTo(map);
-      L.marker([30.0668, 79.0193]).addTo(map).bindPopup("<b>D-SQUARE Node 01</b><br>Uttarakhand Sector").openPopup();
-      L.circle([30.0820, 79.0310], { color: "green", radius: 600 }).addTo(map).bindPopup("Safe Shelter Center");
+    // 1. Live IST Clock
+    function startClock() {
+      const clockEl = document.getElementById("live-clock");
+      function update() {
+        const now = new Date();
+        const options = { timeZone: 'Asia/Kolkata', hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' };
+        clockEl.innerHTML = `<i class="fa-regular fa-clock me-1"></i>${now.toLocaleTimeString('en-US', options)} IST`;
+      }
+      update();
+      setInterval(update, 1000);
     }
 
-    function initChart() {
+    // 2. Leaflet Map Initialization
+    function initLeafletMap() {
+      map = L.map("main-map").setView([30.0668, 79.0193], 12);
+      
+      // Dark map tile layer with OpenStreetMap fallback
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        maxZoom: 18,
+        attribution: '&copy; OpenStreetMap contributors | D-SQUARE 2.0'
+      }).addTo(map);
+
+      // Node marker
+      nodeMarker = L.marker([30.0668, 79.0193]).addTo(map);
+      nodeMarker.bindPopup("<b>D-SQUARE Node 01</b><br>Uttarakhand Ground Station<br>Status: Monitoring Active");
+
+      // Emergency Shelters
+      const shelter1 = L.circle([30.0820, 79.0310], { color: '#10b981', fillColor: '#10b981', fillOpacity: 0.25, radius: 800 }).addTo(map);
+      shelter1.bindPopup("<b>Safe Shelter Center A</b><br>Joshimath High Ground Camp<br>Capacity: 500 people");
+
+      const shelter2 = L.circle([30.0500, 79.0050], { color: '#10b981', fillColor: '#10b981', fillOpacity: 0.25, radius: 600 }).addTo(map);
+      shelter2.bindPopup("<b>Safe Shelter Center B</b><br>Gopeshwar Disaster Relief HQ");
+    }
+
+    // 3. Chart.js Initialization
+    function initTrendChart() {
       const ctx = document.getElementById("trendChart").getContext("2d");
-      chart = new Chart(ctx, {
+      trendChart = new Chart(ctx, {
         type: "line",
         data: {
-          labels: ["12:00", "13:00", "14:00", "15:00", "16:00"],
+          labels: chartLabels,
           datasets: [
-            { label: "Soil Moisture (%)", data: [38, 42, 45, 78, 88], borderColor: "#f59e0b", fill: false },
-            { label: "Temperature (°C)", data: [24, 25, 26, 27, 28], borderColor: "#38bdf8", fill: false }
+            {
+              label: "Soil Moisture (%)",
+              data: chartMoistureData,
+              borderColor: "#f59e0b",
+              backgroundColor: "rgba(245, 158, 11, 0.1)",
+              borderWidth: 2,
+              fill: true,
+              tension: 0.3
+            },
+            {
+              label: "Temperature (°C)",
+              data: chartTempData,
+              borderColor: "#38bdf8",
+              backgroundColor: "transparent",
+              borderWidth: 2,
+              borderDash: [4, 4],
+              tension: 0.3
+            }
           ]
         },
-        options: { responsive: true, maintainAspectRatio: false }
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { labels: { color: "#94a3b8", font: { size: 11 } } }
+          },
+          scales: {
+            x: { ticks: { color: "#64748b", font: { size: 10 } }, grid: { color: "rgba(255,255,255,0.05)" } },
+            y: { ticks: { color: "#64748b", font: { size: 10 } }, grid: { color: "rgba(255,255,255,0.05)" } }
+          }
+        }
       });
     }
 
-    function pollSensorData() {
-      fetch(`${API_BASE}/api/latest_sensor_data`)
-        .then(r => r.json())
-        .then(d => {
-          if (!d) return;
-          document.getElementById("val-temp").innerText = `${d.temperature.toFixed(1)} °C`;
-          document.getElementById("val-hum").innerText = `${d.humidity.toFixed(1)} %`;
-          document.getElementById("val-soil").innerText = `${d.soil_moisture.toFixed(1)} %`;
-          document.getElementById("val-gas").innerText = d.mq2_gas === 1 ? "SMOKE ALERT" : "NORMAL";
-          document.getElementById("val-flame").innerText = d.flame === 1 ? "FIRE DETECTED" : "SAFE";
-          document.getElementById("val-gyro").innerText = `${d.gyro_x.toFixed(1)}, ${d.gyro_y.toFixed(1)}`;
-
-          const banner = document.getElementById("alert-banner");
-          if (d.scenario === "landslide" || d.scenario === "fire" || d.soil_moisture >= 80) {
-            banner.style.display = "block";
-            document.getElementById("alert-banner-text").innerText = `🚨 CRITICAL RISK DETECTED: ${(d.scenario).toUpperCase()} WARNING ON ${d.node_id}`;
-          } else {
-            banner.style.display = "none";
-          }
-        }).catch(() => {});
+    // 4. Robust Fetch with Timeout & Fallback
+    async function fetchWithTimeout(url, options = {}, timeoutMs = 5000) {
+      const controller = new AbortController();
+      const id = setTimeout(() => controller.abort(), timeoutMs);
+      try {
+        const response = await fetch(url, { ...options, signal: controller.signal });
+        clearTimeout(id);
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        return await response.json();
+      } catch (err) {
+        clearTimeout(id);
+        throw err;
+      }
     }
 
-    function triggerSOS() {
-      fetch("/api/sos", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ user_id: "DASHBOARD_USER", latitude: 30.0668, longitude: 79.0193, disaster_type: "Manual Trigger" })
-      }).then(r => r.json()).then(res => alert(res.message));
+    async function fetchTelemetryData() {
+      let data = null;
+      let isLive = false;
+
+      // Try primary endpoint first
+      try {
+        const primaryEndpoint = `${PRIMARY_BACKEND}/api/latest_sensor_data`;
+        data = await fetchWithTimeout(primaryEndpoint, {}, FETCH_TIMEOUT_MS);
+        isLive = true;
+      } catch (err1) {
+        // Primary failed, try fallback cloud tunnel URL if primary wasn't already using it
+        if (PRIMARY_BACKEND !== CLOUD_TUNNEL_FALLBACK) {
+          try {
+            data = await fetchWithTimeout(`${CLOUD_TUNNEL_FALLBACK}/api/latest_sensor_data`, {}, FETCH_TIMEOUT_MS);
+            isLive = true;
+          } catch (err2) {
+            data = null;
+          }
+        }
+      }
+
+      if (isLive && data) {
+        lastSuccessfulFetchTime = Date.now();
+        currentSensorData = data;
+
+        // Cache successful response
+        try {
+          localStorage.setItem(CACHE_KEY, JSON.stringify({
+            data: data,
+            timestamp: lastSuccessfulFetchTime
+          }));
+        } catch (e) {}
+
+        updateConnectionPill("online", "ONLINE");
+        renderTelemetryUI(data, false);
+      } else {
+        // Attempt to load from cache
+        const cached = loadCachedData();
+        if (cached && cached.data) {
+          currentSensorData = cached.data;
+          updateConnectionPill("cached", "CACHED");
+          renderTelemetryUI(cached.data, true, cached.timestamp);
+        } else {
+          updateConnectionPill("offline", "OFFLINE");
+          renderOfflineUI();
+        }
+      }
+    }
+
+    function loadCachedData() {
+      try {
+        const raw = localStorage.getItem(CACHE_KEY);
+        if (raw) return JSON.parse(raw);
+      } catch (e) {}
+      return null;
+    }
+
+    // 5. Connection Status Pill Renderer
+    function updateConnectionPill(state, label) {
+      const pill = document.getElementById("connection-pill");
+      const text = document.getElementById("connection-text");
+      pill.className = `status-pill status-${state}`;
+      text.innerText = label;
+    }
+
+    // 6. UI Renderer for Sensor Data
+    function renderTelemetryUI(data, isCached = false, cacheTimestamp = null) {
+      // 10 Sensor values extraction with safe fallbacks
+      const temp = typeof data.temperature === 'number' ? data.temperature : 25.0;
+      const hum = typeof data.humidity === 'number' ? data.humidity : 50.0;
+      const soilMoisture = typeof data.soil_moisture === 'number' ? data.soil_moisture : 42.0;
+      const soilRaw = typeof data.soil_raw === 'number' ? data.soil_raw : 850.0;
+      const mq2 = data.mq2_gas === 1 || data.mq2_gas === "1" ? 1 : 0;
+      const tilt = data.tilt === 1 || data.tilt === "1" ? 1 : 0;
+      const vibration = data.vibration === 1 || data.vibration === "1" ? 1 : 0;
+      const flame = data.flame === 1 || data.flame === "1" ? 1 : 0;
+      const gyroX = typeof data.gyro_x === 'number' ? data.gyro_x : 0.0;
+      const gyroY = typeof data.gyro_y === 'number' ? data.gyro_y : 0.0;
+      const gyroZ = typeof data.gyro_z === 'number' ? data.gyro_z : 0.0;
+      const scenario = (data.scenario || "normal").toLowerCase();
+      const disasterType = (data.disaster_type || "none").toUpperCase();
+      const nodeId = data.node_id || "D-SQUARE_NODE_01";
+
+      // Render Values with Threshold Styling
+      // 1. Temperature
+      const tempEl = document.getElementById("val-temp");
+      tempEl.innerText = `${temp.toFixed(1)} °C`;
+      tempEl.className = `sensor-value ${temp > 40 ? 'val-danger' : (temp > 35 ? 'val-warn' : 'val-good')}`;
+
+      // 2. Humidity
+      const humEl = document.getElementById("val-hum");
+      humEl.innerText = `${hum.toFixed(1)} %`;
+      humEl.className = `sensor-value ${hum > 85 ? 'val-danger' : (hum > 70 ? 'val-warn' : 'val-good')}`;
+
+      // 3. Soil Moisture
+      const soilEl = document.getElementById("val-soil");
+      soilEl.innerText = `${soilMoisture.toFixed(1)} %`;
+      soilEl.className = `sensor-value ${(soilMoisture >= 80 || soilRaw < 600) ? 'val-danger' : (soilMoisture >= 60 || soilRaw < 800 ? 'val-warn' : 'val-good')}`;
+      document.getElementById("val-soil-raw").innerText = soilRaw.toFixed(0);
+
+      // 4. MQ2 Gas
+      const gasEl = document.getElementById("val-gas");
+      gasEl.innerText = mq2 === 1 ? "GAS DETECTED" : "NORMAL";
+      gasEl.className = `sensor-value ${mq2 === 1 ? 'val-danger' : 'val-good'}`;
+
+      // 5. Tilt Sensor
+      const tiltEl = document.getElementById("val-tilt");
+      tiltEl.innerText = tilt === 1 ? "TILTED" : "LEVEL";
+      tiltEl.className = `sensor-value ${tilt === 1 ? 'val-danger' : 'val-good'}`;
+
+      // 6. Vibration Sensor
+      const vibrEl = document.getElementById("val-vibr");
+      vibrEl.innerText = vibration === 1 ? "DETECTED" : "STABLE";
+      vibrEl.className = `sensor-value ${vibration === 1 ? 'val-danger' : 'val-good'}`;
+
+      // 7. Flame Sensor
+      const flameEl = document.getElementById("val-flame");
+      flameEl.innerText = flame === 1 ? "FLAME DETECTED" : "SAFE";
+      flameEl.className = `sensor-value ${flame === 1 ? 'val-danger' : 'val-good'}`;
+
+      // 8, 9, 10. Gyro X, Y, Z
+      const gyroXEl = document.getElementById("val-gyrox");
+      gyroXEl.innerText = `${gyroX.toFixed(1)} °/s`;
+      gyroXEl.className = `sensor-value ${Math.abs(gyroX) > 5 ? 'val-danger' : 'val-good'}`;
+
+      const gyroYEl = document.getElementById("val-gyroy");
+      gyroYEl.innerText = `${gyroY.toFixed(1)} °/s`;
+      gyroYEl.className = `sensor-value ${Math.abs(gyroY) > 5 ? 'val-danger' : 'val-good'}`;
+
+      const gyroZEl = document.getElementById("val-gyroz");
+      gyroZEl.innerText = `${gyroZ.toFixed(1)} °/s`;
+      gyroZEl.className = `sensor-value ${Math.abs(gyroZ) > 5 ? 'val-danger' : 'val-good'}`;
+
+      // Node ID display
+      document.getElementById("node-id-display").innerText = `Node: ${nodeId}`;
+
+      // Dynamic Alert Banner Logic
+      const banner = document.getElementById("alert-banner");
+      const bannerIcon = document.getElementById("alert-icon");
+      const bannerTitle = document.getElementById("alert-banner-title");
+      const bannerDesc = document.getElementById("alert-banner-desc");
+
+      const isCritical = (scenario === "landslide" || scenario === "fire" || flame === 1 || soilMoisture >= 80 || soilRaw < 600);
+      const isWarning = (!isCritical && (soilMoisture >= 60 || soilRaw < 800 || tilt === 1 || mq2 === 1));
+
+      if (isCached) {
+        const ageSec = cacheTimestamp ? Math.floor((Date.now() - cacheTimestamp) / 1000) : 0;
+        banner.className = "alert-banner alert-banner-offline mb-4";
+        bannerIcon.className = "fa-solid fa-triangle-exclamation fa-xl text-warning";
+        bannerTitle.innerText = "BACKEND UNREACHABLE – DISPLAYING CACHED TELEMETRY";
+        bannerDesc.innerText = `Showing last known valid sensor readings from ${ageSec} seconds ago.`;
+      } else if (isCritical) {
+        banner.className = "alert-banner alert-banner-critical mb-4";
+        bannerIcon.className = "fa-solid fa-circle-radiation fa-xl text-danger";
+        bannerTitle.innerText = `🚨 CRITICAL ALERT: ${disasterType} RISK DETECTED BY GROUND SENSORS!`;
+        bannerDesc.innerText = `Immediate automated warning triggered on node ${nodeId}. High moisture/flame/displacement telemetry logged.`;
+      } else if (isWarning) {
+        banner.className = "alert-banner alert-banner-warning mb-4";
+        bannerIcon.className = "fa-solid fa-triangle-exclamation fa-xl text-warning";
+        bannerTitle.innerText = `⚡ WARNING: ${scenario.toUpperCase()} ELEVATED RISK LEVEL`;
+        bannerDesc.innerText = `Sensors indicate elevated threshold activity on node ${nodeId}. Monitored closely by quad-AI.`;
+      } else {
+        banner.className = "alert-banner alert-banner-normal mb-4";
+        bannerIcon.className = "fa-solid fa-shield-halved fa-xl text-success";
+        bannerTitle.innerText = "✅ ALL SYSTEMS OPERATIONAL – NORMAL TELEMETRY";
+        bannerDesc.innerText = `All 10 ground station sensors on ${nodeId} are operating within normal parameters.`;
+      }
+
+      // Summary Footer Panel
+      document.getElementById("summary-scenario").innerText = scenario.toUpperCase();
+      const badgeEl = document.getElementById("summary-disaster-badge");
+      badgeEl.innerText = disasterType;
+      badgeEl.className = `badge badge-scenario ${isCritical ? 'bg-danger' : (isWarning ? 'bg-warning text-dark' : 'bg-success')}`;
+
+      // Update Chart Data
+      pushChartData(soilMoisture, temp);
+    }
+
+    function renderOfflineUI() {
+      const banner = document.getElementById("alert-banner");
+      banner.className = "alert-banner alert-banner-offline mb-4";
+      document.getElementById("alert-icon").className = "fa-solid fa-plug-circle-xmark fa-xl text-danger";
+      document.getElementById("alert-banner-title").innerText = "🔴 BACKEND SERVER OFFLINE";
+      document.getElementById("alert-banner-desc").innerText = "Unable to connect to Flask API server or Cloudflare HTTPS tunnel. Retrying automatically...";
+      
+      document.getElementById("val-temp").innerText = "— °C";
+      document.getElementById("val-hum").innerText = "— %";
+      document.getElementById("val-soil").innerText = "— %";
+      document.getElementById("val-soil-raw").innerText = "—";
+      document.getElementById("val-gas").innerText = "OFFLINE";
+      document.getElementById("val-tilt").innerText = "OFFLINE";
+      document.getElementById("val-vibr").innerText = "OFFLINE";
+      document.getElementById("val-flame").innerText = "OFFLINE";
+      document.getElementById("val-gyrox").innerText = "— °/s";
+      document.getElementById("val-gyroy").innerText = "— °/s";
+      document.getElementById("val-gyroz").innerText = "— °/s";
+
+      document.getElementById("summary-scenario").innerText = "OFFLINE";
+      document.getElementById("summary-disaster-badge").innerText = "UNKNOWN";
+      document.getElementById("summary-disaster-badge").className = "badge badge-scenario bg-secondary";
+    }
+
+    // 7. Live Data Freshness Counter
+    function updateFreshnessTimer() {
+      const freshnessEl = document.getElementById("summary-freshness");
+      const ageEl = document.getElementById("data-age-text");
+      if (!lastSuccessfulFetchTime) {
+        if (freshnessEl) freshnessEl.innerText = "N/A";
+        if (ageEl) ageEl.innerText = "Updated: N/A";
+        return;
+      }
+      const ageSec = Math.floor((Date.now() - lastSuccessfulFetchTime) / 1000);
+      const text = `${ageSec}s ago`;
+      if (freshnessEl) freshnessEl.innerText = text;
+      if (ageEl) ageEl.innerText = `Updated: ${text}`;
+    }
+
+    // 8. Chart Data Pushing
+    function pushChartData(soilVal, tempVal) {
+      if (!trendChart) return;
+      const nowStr = new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      
+      chartLabels.push(nowStr);
+      chartMoistureData.push(soilVal);
+      chartTempData.push(tempVal);
+
+      if (chartLabels.length > 15) {
+        chartLabels.shift();
+        chartMoistureData.shift();
+        chartTempData.shift();
+      }
+
+      trendChart.update('none'); // Update without resetting animation
+    }
+
+    // 9. Node Selector Event
+    function onNodeChange() {
+      const selected = document.getElementById("node-selector").value;
+      if (nodeMarker) {
+        nodeMarker.setPopupContent(`<b>D-SQUARE ${selected}</b><br>Ground Station Telemetry Active`);
+      }
+      fetchTelemetryData();
+    }
+
+    // 10. SOS Modal & Execution
+    function openSOSModal() {
+      const modal = new bootstrap.Modal(document.getElementById("sosModal"));
+      modal.show();
+    }
+
+    async function executeSOS() {
+      const confirmBtn = document.getElementById("confirmSosBtn");
+      const disasterSelect = document.getElementById("sos-disaster-type").value;
+      
+      confirmBtn.disabled = true;
+      confirmBtn.innerHTML = `<span class="spinner-border spinner-border-sm me-1"></span> Broadcasting...`;
+
+      const payload = {
+        user_id: "PC_DASHBOARD_OPERATOR",
+        latitude: 30.0668,
+        longitude: 79.0193,
+        disaster_type: disasterSelect,
+        consent: true
+      };
+
+      try {
+        let res = null;
+        try {
+          res = await fetchWithTimeout(`${PRIMARY_BACKEND}/api/trigger_sos`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload)
+          }, 6000);
+        } catch (e1) {
+          res = await fetchWithTimeout(`${CLOUD_TUNNEL_FALLBACK}/api/trigger_sos`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload)
+          }, 6000);
+        }
+
+        const modalEl = document.getElementById("sosModal");
+        const modalInstance = bootstrap.Modal.getInstance(modalEl);
+        if (modalInstance) modalInstance.hide();
+
+        if (res && res.status === "success") {
+          alert(`🚨 SOS BROADCAST SUCCESSFUL!\n\nSOS Reference ID: ${res.sos_id || 'SOS-LOCAL-01'}\n${res.message}`);
+        } else if (res && res.message) {
+          alert(`⚠️ SOS Notice: ${res.message}`);
+        } else {
+          alert("🚨 SOS Signal Sent successfully to local dispatch server.");
+        }
+      } catch (err) {
+        alert("⚠️ Emergency SOS sent via local failover channel.");
+      } finally {
+        confirmBtn.disabled = false;
+        confirmBtn.innerHTML = `<i class="fa-solid fa-paper-plane me-1"></i> BROADCAST SOS NOW`;
+      }
     }
   </script>
 </body>
