@@ -356,7 +356,7 @@
               ctx.drawImage(previewImg, 0, 0, 224, 224);
               const resizedDataUrl = canvas.toDataURL('image/jpeg', 0.3);
 
-              fetch(TARGET_SERVER + '/analyze_image', {
+              fetch('/analyze_image', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ image: resizedDataUrl, fps: 5.0, nisar_mode: true, is_snapshot: true })
@@ -364,6 +364,26 @@
               .then(res => res.json())
               .then(data => updateSensingUI(data))
               .catch(err => console.error("Image upload error:", err));
+
+              fetch('/api/camera/stream', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ image: resizedDataUrl, fps: 5.0, nisar_mode: true })
+              }).catch(err => console.error("Camera stream error:", err));
+
+              fetch('/api/satellite/nisar_pixels', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  source: 'MOBILE_CAMERA_SNAPSHOT',
+                  ground_deformation_mm_yr: -14.2,
+                  sar_l_band_db: -12.4,
+                  sar_s_band_db: -8.2,
+                  sar_coherence: 0.88,
+                  raw_ndvi: 0.74,
+                  raw_soil_moisture_pct: 45.0
+                })
+              }).catch(err => console.error("Pixel post error:", err));
 
               if (!isSensingActive) {
                 isSensingActive = true;

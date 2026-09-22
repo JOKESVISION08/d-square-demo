@@ -816,8 +816,9 @@
       fetchNisarCameraFrame();
       fetchFusionAnalysis();
 
-      // Polling NISAR camera stream frame every 1.5 seconds
+      // Polling NISAR camera stream frame and radar pixels every 1.5 seconds
       setInterval(fetchNisarCameraFrame, 1500);
+      setInterval(fetchNisarPixels, 1500);
 
       // Live 1s freshness counter update
       setInterval(updateFreshnessTimer, 1000);

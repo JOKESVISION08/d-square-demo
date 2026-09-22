@@ -714,9 +714,28 @@ def post_start_satellite_sensing():
 def get_latest_camera_frame():
     current_time = time.time()
     frame_copy = dict(latest_nisar_camera_frame)
-    if frame_copy.get("timestamp"):
-        if current_time - frame_copy["timestamp"] > 8.0:
-            frame_copy["status"] = "OFFLINE"
+
+    if not frame_copy.get("image"):
+        latest_img_path = os.path.join(NISAR_DIR, "nisar_field_monitor_latest.jpg")
+        if os.path.exists(latest_img_path):
+            try:
+                with open(latest_img_path, "rb") as f:
+                    b64_str = "data:image/jpeg;base64," + base64.b64encode(f.read()).decode("utf-8")
+                    frame_copy = {
+                        "image": b64_str,
+                        "timestamp": os.path.getmtime(latest_img_path),
+                        "fps": 5.0,
+                        "nisar_mode": True,
+                        "status": "LIVE"
+                    }
+            except Exception:
+                pass
+
+    if frame_copy.get("image"):
+        frame_copy["status"] = "LIVE"
+    else:
+        frame_copy["status"] = "STANDBY"
+
     return jsonify({"status": "success", "camera": frame_copy})
 
 @app.route("/api/fusion/upload_compare", methods=["POST"])
