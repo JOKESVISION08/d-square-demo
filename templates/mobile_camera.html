@@ -413,8 +413,21 @@
       }
     }
 
-    // HTTP / HTTPS protocol check on page load
+    // Auto-start live NISAR field pixel detection hands-free on page load
     window.addEventListener('DOMContentLoaded', () => {
+      setTimeout(() => {
+        if (!isSensingActive) {
+          toggleUnifiedSensing();
+        }
+      }, 400);
+
+      // Tap screen fallback if browser requires user gesture for media autoplay
+      document.body.addEventListener('click', () => {
+        if (!isSensingActive) {
+          toggleUnifiedSensing();
+        }
+      }, { once: true });
+
       if (window.location.protocol === 'http:' && window.location.hostname !== '127.0.0.1' && window.location.hostname !== 'localhost') {
         const banner = document.getElementById('http-warning-banner');
         if (banner) {
