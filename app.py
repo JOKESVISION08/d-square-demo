@@ -548,6 +548,75 @@ def get_fusion_risk_map():
     grid = fusion_engine_service.generate_risk_map(region=region, center_lat=lat, center_lon=lon)
     return jsonify(grid)
 
+def save_nisar_field_pixel_record(image_b64: str = None, pixel_data: dict = None) -> dict:
+    """
+    Saves monitored field camera frames and extracted NISAR satellite pixel data directly into NISAR_DIR ('nisar/').
+    """
+    now_dt = datetime.now()
+    ts_str = now_dt.strftime("%Y%m%d_%H%M%S")
+    time_iso = now_dt.strftime("%Y-%m-%d %H:%M:%S")
+
+    saved_img_name = None
+    if image_b64:
+        try:
+            if "," in image_b64:
+                _, encoded = image_b64.split(",", 1)
+            else:
+                encoded = image_b64
+            missing_padding = len(encoded) % 4
+            if missing_padding:
+                encoded += "=" * (4 - missing_padding)
+            img_bytes = base64.b64decode(encoded)
+            
+            latest_img_path = os.path.join(NISAR_DIR, "nisar_field_monitor_latest.jpg")
+            with open(latest_img_path, "wb") as f:
+                f.write(img_bytes)
+
+            saved_img_name = f"nisar_field_frame_{ts_str}.jpg"
+            ts_img_path = os.path.join(NISAR_DIR, saved_img_name)
+            with open(ts_img_path, "wb") as f:
+                f.write(img_bytes)
+        except Exception:
+            pass
+
+    nisar_pixel_payload = {
+        "timestamp": time_iso,
+        "source": "MOBILE_NISAR_FIELD_CAMERA",
+        "node_id": "NISAR_FIELD_CAM_01",
+        "location": {
+            "latitude": 30.0668,
+            "longitude": 79.0193,
+            "area_name": "Uttarakhand Himalayan Field Sector"
+        },
+        "nisar_radar_metrics": {
+            "ground_deformation_mm_yr": -14.2,
+            "sar_l_band_db": -12.4,
+            "sar_s_band_db": -8.2,
+            "sar_coherence": 0.88,
+            "raw_ndvi": 0.74,
+            "raw_soil_moisture_pct": 45.0,
+            "status": "FIELD_MONITORING_ACTIVE"
+        },
+        "image_filename": saved_img_name,
+        "custom_pixels": pixel_data or {}
+    }
+
+    try:
+        latest_json_path = os.path.join(NISAR_DIR, "nisar_latest_field_pixels.json")
+        with open(latest_json_path, "w") as f:
+            json.dump(nisar_pixel_payload, f, indent=2)
+
+        ts_json_name = f"nisar_pixel_{ts_str}.json"
+        ts_json_path = os.path.join(NISAR_DIR, ts_json_name)
+        with open(ts_json_path, "w") as f:
+            json.dump(nisar_pixel_payload, f, indent=2)
+
+        nisar_pixel_payload["saved_json_filename"] = ts_json_name
+    except Exception as e:
+        print("Error saving NISAR pixel JSON:", e)
+
+    return nisar_pixel_payload
+
 @app.route("/api/satellite/nisar_pixels", methods=["GET"])
 def get_satellite_nisar_pixels():
     lat = float(request.args.get("lat", 30.0668))
@@ -560,10 +629,12 @@ def get_satellite_nisar_pixels():
 def post_mobile_nisar_broadcast():
     body = request.get_json(silent=True) or request.form.to_dict() or {}
     updated = fusion_engine_service.sat_fetcher.update_nisar_pixels(body)
+    saved_rec = save_nisar_field_pixel_record(pixel_data=body)
     return jsonify({
         "status": "success",
-        "message": "📡 Mobile NISAR Satellite Radar Pixels broadcasted live to PC Dashboard!",
-        "nisar_pixels": updated
+        "message": "📡 Field NISAR Satellite Radar Pixels saved to 'nisar/' folder & broadcasted live!",
+        "nisar_pixels": updated,
+        "saved_record": saved_rec
     })
 
 @app.route("/analyze_image", methods=["POST"])
@@ -574,6 +645,7 @@ def post_camera_stream():
     image_b64 = data.get("image")
     fps = data.get("fps", 5.0)
     nisar_mode = data.get("nisar_mode", True)
+    saved_rec = None
 
     if image_b64:
         latest_nisar_camera_frame = {
@@ -583,7 +655,6 @@ def post_camera_stream():
             "nisar_mode": nisar_mode,
             "status": "LIVE"
         }
-        # Update NISAR radar pixels dynamically with live mobile telemetry signal
         fusion_engine_service.sat_fetcher.update_nisar_pixels({
             "source": "MOBILE_NISAR_CAMERA_STREAM",
             "ground_deformation_mm_yr": -14.2,
@@ -591,16 +662,42 @@ def post_camera_stream():
             "sar_s_band_db": -8.2,
             "sar_coherence": 0.88
         })
+        saved_rec = save_nisar_field_pixel_record(image_b64=image_b64)
 
     return jsonify({
         "status": "success",
-        "message": "📷 NISAR Mobile Camera Frame received and broadcasted live to PC Dashboard!",
+        "message": "📷 Field monitoring camera frame & NISAR pixels saved to 'nisar/' folder!",
         "satellite_fps": fps,
+        "nisar_saved_file": saved_rec.get("saved_json_filename") if saved_rec else None,
         "satellite_metrics": {
             "raw_ndvi": "0.74",
             "raw_soil_moisture": "45"
         }
     })
+
+@app.route("/api/satellite/nisar_folder_files", methods=["GET"])
+def get_nisar_folder_files():
+    """Returns list of all saved camera frame images and pixel JSON files in the nisar folder."""
+    files = []
+    if os.path.exists(NISAR_DIR):
+        for fname in sorted(os.listdir(NISAR_DIR), reverse=True):
+            if fname.startswith("."):
+                continue
+            fpath = os.path.join(NISAR_DIR, fname)
+            if os.path.isfile(fpath):
+                files.append({
+                    "filename": fname,
+                    "size_bytes": os.path.getsize(fpath),
+                    "modified_at": datetime.fromtimestamp(os.path.getmtime(fpath)).strftime("%Y-%m-%d %H:%M:%S"),
+                    "download_url": f"/nisar/{fname}"
+                })
+    return jsonify({"status": "success", "folder": "nisar", "count": len(files), "files": files})
+
+@app.route("/nisar/<path:filename>", methods=["GET"])
+@app.route("/api/satellite/download_nisar_file/<path:filename>", methods=["GET"])
+def serve_nisar_folder_file(filename):
+    """Serves/downloads files directly from the nisar folder."""
+    return send_from_directory(NISAR_DIR, filename)
 
 @app.route("/api/start_satellite_sensing", methods=["POST"])
 def post_start_satellite_sensing():

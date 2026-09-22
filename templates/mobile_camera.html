@@ -167,13 +167,16 @@
       </div>
     </div>
 
-    <!-- Live NISAR & ISRO Satellite Telemetry Bar -->
+    <!-- Live NISAR & ISRO Satellite Telemetry & Storage Bar -->
     <div class="p-2 bg-dark rounded border border-warning small mt-3 mx-auto text-center" style="max-width: 480px;">
-      <div class="text-warning fw-semibold mb-1"><i class="fa-solid fa-satellite me-1"></i> NISAR Dual-SAR (L-band & S-band) Orbit Telemetry</div>
-      <div class="d-flex justify-content-around text-muted">
+      <div class="text-warning fw-semibold mb-1"><i class="fa-solid fa-satellite me-1"></i> NISAR Dual-SAR Field Monitoring</div>
+      <div class="d-flex justify-content-around text-muted mb-1">
         <span>NDVI: <strong class="text-success" id="sat-val-ndvi">0.72</strong></span>
         <span>L-Band: <strong class="text-info" id="sat-val-lband">-12.4 dB</strong></span>
         <span>Soil M: <strong class="text-info" id="sat-val-soil">42%</strong></span>
+      </div>
+      <div class="badge bg-primary text-white w-100 py-1">
+        <i class="fa-solid fa-folder-closed me-1"></i> Monitoring Field & Auto-Saving Pixels to: <code>nisar/</code> folder
       </div>
     </div>
 

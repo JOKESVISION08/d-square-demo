@@ -419,11 +419,16 @@
             </div>
           </div>
 
-          <div class="d-flex justify-content-between align-items-center mt-2">
+          <div class="d-flex justify-content-between align-items-center mt-2 flex-wrap gap-1">
             <span class="small text-slate-300" style="color: #cbd5e1; font-weight: 500;" id="nisar-cam-fps-text">Stream: Standby</span>
-            <a href="mobile_camera.html" target="_blank" class="btn btn-outline-info btn-sm py-1 px-3 fw-bold">
-              <i class="fa-solid fa-camera me-1"></i> Open Mobile NISAR Camera
-            </a>
+            <div class="d-flex gap-2">
+              <a href="/api/satellite/nisar_folder_files" target="_blank" class="btn btn-outline-warning btn-sm py-1 px-2 fw-bold">
+                <i class="fa-solid fa-folder-open me-1"></i> NISAR Folder Files
+              </a>
+              <a href="mobile_camera.html" target="_blank" class="btn btn-outline-info btn-sm py-1 px-2 fw-bold">
+                <i class="fa-solid fa-camera me-1"></i> Field NISAR Cam
+              </a>
+            </div>
           </div>
         </div>
       </div>
