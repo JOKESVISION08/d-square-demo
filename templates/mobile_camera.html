@@ -180,9 +180,7 @@
   </div>
 
   <script>
-    const TARGET_SERVER = (window.location.hostname === 'harmonious-gelato-fda171.netlify.app' || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
-      ? '' 
-      : 'https://harmonious-gelato-fda171.netlify.app';
+    const TARGET_SERVER = '';
 
     let video = document.getElementById('webcam');
     let previewImg = document.getElementById('preview-img');
@@ -420,7 +418,7 @@
           banner.style.display = 'block';
           const link = banner.querySelector('a');
           if (link) {
-            link.href = `https://${window.location.hostname}:5000/mobile_camera`;
+            link.href = `https://${window.location.hostname}:5001/mobile_camera`;
           }
         }
       }
