@@ -217,6 +217,16 @@
           }
         }
 
+        isSensingActive = true;
+        btn.className = 'btn btn-danger text-white fw-bold btn-lg w-100 py-3 shadow mb-3 btn-sensing-active';
+        btn.innerHTML = '<i class="fa-solid fa-satellite-dish me-2"></i> STOP NISAR RADAR SENSING';
+
+        const statusOverlay = document.getElementById('status-overlay');
+        if (statusOverlay) {
+          statusOverlay.className = 'overlay-badge bg-success text-white';
+          statusOverlay.innerHTML = '<i class="fa-solid fa-circle-check me-1"></i> NISAR RADAR SENSING ACTIVE';
+        }
+
         if (stream) {
           video.srcObject = stream;
           video.style.display = 'block';
@@ -227,20 +237,18 @@
             console.warn("Video play error:", err);
           }
 
-          isSensingActive = true;
-          btn.className = 'btn btn-danger text-white fw-bold btn-lg w-100 py-3 shadow mb-3 btn-sensing-active';
-          btn.innerHTML = '<i class="fa-solid fa-satellite-dish me-2"></i> STOP NISAR RADAR SENSING';
-
           lastFrameTime = performance.now();
           frameCount = 0;
           cameraInterval = setInterval(captureAndUploadFrame, 350);
-          fetchSatelliteTelemetry();
-          satelliteInterval = setInterval(fetchSatelliteTelemetry, 1000);
         } else {
-          // Mobile HTTP Fallback: Open Native Smartphone Camera App for Photo Capture
-          console.warn("getUserMedia not supported over plain mobile HTTP. Opening native camera shutter...");
+          // Mobile HTTP Fallback: Open Smartphone Camera App Shutter for Photo Capture
+          console.warn("getUserMedia video stream unshielded on plain HTTP. Opening mobile camera shutter...");
           document.getElementById('native-cam-input').click();
         }
+
+        // Start NISAR Satellite Radar Telemetry & Field Pixel Broadcast loop
+        fetchSatelliteTelemetry();
+        satelliteInterval = setInterval(fetchSatelliteTelemetry, 1000);
 
       } else {
         // Stop Sensing Workflow
@@ -302,7 +310,7 @@
     }
 
     function fetchSatelliteTelemetry() {
-      fetch(TARGET_SERVER + '/api/start_satellite_sensing', {
+      fetch('/api/start_satellite_sensing', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ scenario: 'normal' })
@@ -313,12 +321,26 @@
           document.getElementById('sat-fps-badge').innerText = `🛰️ NISAR Dual-SAR: ${data.satellite_fps} FPS`;
         }
         if (data.satellite_metrics) {
-          document.getElementById('sat-val-ndvi').innerText = data.satellite_metrics.raw_ndvi || '0.72';
+          document.getElementById('sat-val-ndvi').innerText = data.satellite_metrics.raw_ndvi || '0.74';
           document.getElementById('sat-val-lband').innerText = '-12.4 dB';
-          document.getElementById('sat-val-soil').innerText = `${data.satellite_metrics.raw_soil_moisture || '42'}%`;
+          document.getElementById('sat-val-soil').innerText = `${data.satellite_metrics.raw_soil_moisture || '45'}%`;
         }
       })
       .catch(err => console.error("Satellite telemetry error:", err));
+
+      fetch('/api/satellite/nisar_pixels', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          source: 'MOBILE_NISAR_SENSING_ACTIVE',
+          ground_deformation_mm_yr: -14.2,
+          sar_l_band_db: -12.4,
+          sar_s_band_db: -8.2,
+          sar_coherence: 0.88,
+          raw_ndvi: 0.74,
+          raw_soil_moisture_pct: 45.0
+        })
+      }).catch(err => console.log("Pixel broadcast error:", err));
     }
 
     function handleNativePhoto(input) {

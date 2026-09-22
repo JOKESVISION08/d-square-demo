@@ -1,0 +1,21 @@
+{
+  "timestamp": "2026-09-22 07:09:18",
+  "source": "MOBILE_NISAR_FIELD_CAMERA",
+  "node_id": "NISAR_FIELD_CAM_01",
+  "location": {
+    "latitude": 30.0668,
+    "longitude": 79.0193,
+    "area_name": "Uttarakhand Himalayan Field Sector"
+  },
+  "nisar_radar_metrics": {
+    "ground_deformation_mm_yr": -14.2,
+    "sar_l_band_db": -12.4,
+    "sar_s_band_db": -8.2,
+    "sar_coherence": 0.88,
+    "raw_ndvi": 0.74,
+    "raw_soil_moisture_pct": 45.0,
+    "status": "FIELD_MONITORING_ACTIVE"
+  },
+  "image_filename": "nisar_field_frame_20260922_070918.jpg",
+  "custom_pixels": {}
+}
