@@ -198,20 +198,22 @@
       const btn = document.getElementById('btn-unified-sensing');
 
       if (!isSensingActive) {
-        // 1. Activate Mobile Rear / Back Camera automatically
+        // 1. Activate Mobile Rear / Back Camera safely
         let stream = null;
-        const constraintOptions = [
-          { video: { facingMode: { ideal: "environment" }, width: { ideal: 640 }, height: { ideal: 480 } } },
-          { video: { facingMode: "environment" } },
-          { video: true }
-        ];
+        if (navigator && navigator.mediaDevices && typeof navigator.mediaDevices.getUserMedia === "function") {
+          const constraintOptions = [
+            { video: { facingMode: { ideal: "environment" }, width: { ideal: 640 }, height: { ideal: 480 } } },
+            { video: { facingMode: "environment" } },
+            { video: true }
+          ];
 
-        for (let option of constraintOptions) {
-          try {
-            stream = await navigator.mediaDevices.getUserMedia(option);
-            if (stream) break;
-          } catch (e) {
-            console.warn("getUserMedia option failed:", option, e);
+          for (let option of constraintOptions) {
+            try {
+              stream = await navigator.mediaDevices.getUserMedia(option);
+              if (stream) break;
+            } catch (e) {
+              console.warn("getUserMedia option failed:", option, e);
+            }
           }
         }
 
@@ -224,23 +226,21 @@
           } catch(err) {
             console.warn("Video play error:", err);
           }
+
+          isSensingActive = true;
+          btn.className = 'btn btn-danger text-white fw-bold btn-lg w-100 py-3 shadow mb-3 btn-sensing-active';
+          btn.innerHTML = '<i class="fa-solid fa-satellite-dish me-2"></i> STOP NISAR RADAR SENSING';
+
+          lastFrameTime = performance.now();
+          frameCount = 0;
+          cameraInterval = setInterval(captureAndUploadFrame, 350);
+          fetchSatelliteTelemetry();
+          satelliteInterval = setInterval(fetchSatelliteTelemetry, 1000);
         } else {
-          // Fallback to Native Mobile Camera Photo input if getUserMedia blocked
+          // Mobile HTTP Fallback: Open Native Smartphone Camera App for Photo Capture
+          console.warn("getUserMedia not supported over plain mobile HTTP. Opening native camera shutter...");
           document.getElementById('native-cam-input').click();
         }
-
-        isSensingActive = true;
-        btn.className = 'btn btn-danger text-white fw-bold btn-lg w-100 py-3 shadow mb-3 btn-sensing-active';
-        btn.innerHTML = '<i class="fa-solid fa-satellite-dish me-2"></i> STOP NISAR RADAR SENSING';
-
-        // 2. Automatically start capturing mobile back camera pictures & uploading to Fusion Engine at 5 FPS
-        lastFrameTime = performance.now();
-        frameCount = 0;
-        cameraInterval = setInterval(captureAndUploadFrame, 350);
-
-        // 3. Automatically start ISRO-NASA NISAR Satellite Remote Sensing Telemetry stream
-        fetchSatelliteTelemetry();
-        satelliteInterval = setInterval(fetchSatelliteTelemetry, 1000);
 
       } else {
         // Stop Sensing Workflow
