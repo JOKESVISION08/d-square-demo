@@ -17,6 +17,8 @@ export default function Header({
   const navigate = useNavigate();
   const location = useLocation();
 
+  const isStandalonePortal = location.pathname === '/dsquare-gpt' || location.pathname === '/rescue-gpt' || location.pathname === '/mobile-nisar';
+
   useEffect(() => {
     const updateTime = () => {
       const now = new Date();
@@ -51,9 +53,11 @@ export default function Header({
               <span className="font-heading font-extrabold text-lg bg-gradient-to-r from-cyan-400 via-blue-400 to-indigo-300 bg-clip-text text-transparent">
                 D-SQUARE 2.0
               </span>
-              <span className="hidden sm:inline-block ml-2 text-xs text-slate-400 font-medium">
-                Disaster Emergency Response System
-              </span>
+              {!isStandalonePortal && (
+                <span className="hidden sm:inline-block ml-2 text-xs text-slate-400 font-medium">
+                  Disaster Emergency Response System
+                </span>
+              )}
             </div>
           </Link>
 
@@ -68,8 +72,10 @@ export default function Header({
           {/* Connection Status */}
           <ConnectionStatus status={connectionStatus} />
 
-          {/* Node Selector */}
-          <NodeSelector currentNode={currentNode} onSelectNode={onSelectNode} />
+          {/* Node Selector (Hidden on standalone portals) */}
+          {!isStandalonePortal && (
+            <NodeSelector currentNode={currentNode} onSelectNode={onSelectNode} />
+          )}
 
           {/* Sound Toggle */}
           <button
@@ -84,8 +90,8 @@ export default function Header({
             {isMuted ? <VolumeX className="w-4 h-4 text-rose-400" /> : <Volume2 className="w-4 h-4 text-cyan-400" />}
           </button>
 
-          {/* ML Fusion Page Link (Hidden on D-SQUARE GPT standalone portal) */}
-          {location.pathname !== '/dsquare-gpt' && (
+          {/* ML Fusion Page Link (Hidden on standalone portals) */}
+          {!isStandalonePortal && (
             <Link
               to="/ml-fusion"
               className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all ${
@@ -112,17 +118,19 @@ export default function Header({
             <span>ALERT CENTER</span>
           </Link>
 
-          {/* Diagnostics Page Link */}
-          <Link
-            to="/diagnostics"
-            className={`px-2.5 py-1.5 rounded-lg text-xs font-mono font-bold transition-all ${
-              location.pathname === '/diagnostics'
-                ? "bg-cyan-500 text-slate-950 shadow-md shadow-cyan-500/20"
-                : "bg-slate-800 text-slate-300 border border-slate-700 hover:bg-slate-700"
-            }`}
-          >
-            DIAGNOSTICS
-          </Link>
+          {/* Diagnostics Page Link (Hidden on standalone portals) */}
+          {!isStandalonePortal && (
+            <Link
+              to="/diagnostics"
+              className={`px-2.5 py-1.5 rounded-lg text-xs font-mono font-bold transition-all ${
+                location.pathname === '/diagnostics'
+                  ? "bg-cyan-500 text-slate-950 shadow-md shadow-cyan-500/20"
+                  : "bg-slate-800 text-slate-300 border border-slate-700 hover:bg-slate-700"
+              }`}
+            >
+              DIAGNOSTICS
+            </Link>
+          )}
 
           {/* Mobile NISAR Link */}
           <Link
