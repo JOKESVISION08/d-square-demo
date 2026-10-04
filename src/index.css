@@ -1,0 +1,78 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    background-color: #0b1329;
+    color: #f8fafc;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Poppins', sans-serif;
+  }
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #0b1329;
+}
+::-webkit-scrollbar-thumb {
+  background: #1e293b;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #334155;
+}
+
+/* Pulse Glows */
+@keyframes glow-red {
+  0%, 100% { box-shadow: 0 0 10px rgba(239, 68, 68, 0.4); }
+  50% { box-shadow: 0 0 25px rgba(239, 68, 68, 0.85); }
+}
+
+@keyframes glow-amber {
+  0%, 100% { box-shadow: 0 0 8px rgba(245, 158, 11, 0.3); }
+  50% { box-shadow: 0 0 18px rgba(245, 158, 11, 0.7); }
+}
+
+.animate-glow-red {
+  animation: glow-red 1.8s infinite ease-in-out;
+}
+
+.animate-glow-amber {
+  animation: glow-amber 2s infinite ease-in-out;
+}
+
+/* Dark Control Room Panel */
+.panel-card {
+  background: #111c38;
+  border: 1px solid #1e293b;
+  border-radius: 12px;
+  transition: all 0.2s ease-in-out;
+}
+
+.panel-card:hover {
+  border-color: rgba(56, 189, 248, 0.3);
+}
+
+/* Leaflet Dark Tile Overlay Fix */
+.leaflet-container {
+  background-color: #0d1527 !important;
+}
+
+.leaflet-popup-content-wrapper {
+  background-color: #111c38 !important;
+  color: #f8fafc !important;
+  border: 1px solid #1e293b;
+  border-radius: 8px !important;
+}
+
+.leaflet-popup-tip {
+  background-color: #111c38 !important;
+}
