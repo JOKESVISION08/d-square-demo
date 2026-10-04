@@ -1,13 +1,12 @@
 /**
- * Audio & Alert Sound Synthesizer for D-SQUARE 2.0
- * Uses sossound folder alert sound (tithuh-warning-545568.mp3) for D-SQUARE GPT and Rescue GPT alerts.
- * Fallback to Web Audio API oscillators if audio element playback is restricted.
+ * Audio & Alert Sound Engine for D-SQUARE 2.0
+ * Uses the sossound folder MP3 alert sound (/sossound/tithuh-warning-545568.mp3)
+ * as the sole alert sound across D-SQUARE GPT, Rescue GPT, and all alert notifications.
  */
 
 const SOS_AUDIO_PATH = '/sossound/tithuh-warning-545568.mp3';
 
 let sosAudioElement = null;
-let audioCtx = null;
 let isMuted = false;
 let continuousAlarmInterval = null;
 
@@ -15,25 +14,20 @@ function getSosAudioElement() {
   if (typeof window === 'undefined') return null;
   if (!sosAudioElement) {
     sosAudioElement = new Audio(SOS_AUDIO_PATH);
-    sosAudioElement.loop = true;
     sosAudioElement.preload = 'auto';
   }
   return sosAudioElement;
 }
 
 export function initAudioContext() {
+  // Pre-load sossound audio element on user interaction
   try {
-    if (!audioCtx) {
-      const AudioContext = window.AudioContext || window.webkitAudioContext;
-      if (AudioContext) {
-        audioCtx = new AudioContext();
-      }
-    }
-    if (audioCtx && audioCtx.state === 'suspended') {
-      audioCtx.resume();
+    const audioEl = getSosAudioElement();
+    if (audioEl) {
+      audioEl.load();
     }
   } catch (err) {
-    console.warn("Web Audio API initialization notice:", err);
+    console.warn("sossound audio pre-load notice:", err);
   }
 }
 
@@ -52,47 +46,12 @@ export function getAudioMuted() {
   return isMuted;
 }
 
-export function playDispatchBeep(frequency = 880, type = 'sine', duration = 0.25) {
+/**
+ * Plays the sossound alert sound once for single notifications or dispatches.
+ */
+export function playSosAlarmSound() {
   if (isMuted) return;
 
-  try {
-    initAudioContext();
-    if (!audioCtx) return;
-
-    const osc = audioCtx.createOscillator();
-    const gain = audioCtx.createGain();
-
-    osc.type = type;
-    osc.frequency.value = frequency;
-
-    const now = audioCtx.currentTime;
-    gain.gain.setValueAtTime(0.3, now);
-    gain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
-
-    osc.connect(gain);
-    gain.connect(audioCtx.destination);
-
-    osc.start(now);
-    osc.stop(now + duration);
-  } catch (err) {
-    console.warn("Audio playback error:", err);
-  }
-}
-
-export function playSosAlarmBeepsFallback() {
-  if (isMuted) return;
-  try {
-    initAudioContext();
-    playDispatchBeep(880, 'sine', 0.2);
-    setTimeout(() => playDispatchBeep(1046.5, 'triangle', 0.25), 220);
-    setTimeout(() => playDispatchBeep(1318.5, 'sine', 0.3), 450);
-  } catch (err) {
-    console.warn("SOS Alarm Beep fallback error:", err);
-  }
-}
-
-export function playSosAlarmBeeps() {
-  if (isMuted) return;
   try {
     const audioEl = getSosAudioElement();
     if (audioEl) {
@@ -101,18 +60,22 @@ export function playSosAlarmBeeps() {
       const promise = audioEl.play();
       if (promise !== undefined) {
         promise.catch(err => {
-          console.warn("sossound playback fallback:", err);
-          playSosAlarmBeepsFallback();
+          console.warn("sossound audio playback notice:", err);
         });
       }
-    } else {
-      playSosAlarmBeepsFallback();
     }
   } catch (err) {
-    playSosAlarmBeepsFallback();
+    console.warn("sossound alert sound error:", err);
   }
 }
 
+// Alias playDispatchBeep & playSosAlarmBeeps to play default sossound alert sound
+export const playDispatchBeep = playSosAlarmSound;
+export const playSosAlarmBeeps = playSosAlarmSound;
+
+/**
+ * Plays the sossound alert sound on a continuous loop for active SOS alerts in D-SQUARE GPT & Rescue GPT.
+ */
 export function startContinuousSosAlarm() {
   if (isMuted) return;
 
@@ -124,29 +87,23 @@ export function startContinuousSosAlarm() {
       const promise = audioEl.play();
       if (promise !== undefined) {
         promise.catch(err => {
-          console.warn("sossound loop playback notice (falling back to beep interval):", err);
-          playSosAlarmBeepsFallback();
+          console.warn("sossound loop play notice (retrying via interval):", err);
           if (!continuousAlarmInterval) {
             continuousAlarmInterval = setInterval(() => {
-              if (!isMuted) playSosAlarmBeepsFallback();
-            }, 1200);
+              if (!isMuted) playSosAlarmSound();
+            }, 2000);
           }
         });
-      }
-    } else {
-      playSosAlarmBeepsFallback();
-      if (!continuousAlarmInterval) {
-        continuousAlarmInterval = setInterval(() => {
-          if (!isMuted) playSosAlarmBeepsFallback();
-        }, 1200);
       }
     }
   } catch (err) {
     console.warn("Continuous sossound alert error:", err);
-    playSosAlarmBeepsFallback();
   }
 }
 
+/**
+ * Stops continuous sossound alert sound and resets playback.
+ */
 export function stopContinuousSosAlarm() {
   if (sosAudioElement) {
     try {

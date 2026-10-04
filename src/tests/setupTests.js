@@ -1,6 +1,6 @@
 import '@testing-library/jest-dom';
 
-// Mock Web Audio API for tests
+// Mock Web Audio API and HTMLMediaElement for tests
 class MockAudioContext {
   constructor() {
     this.state = 'suspended';
@@ -40,3 +40,10 @@ class MockAudioContext {
 
 global.AudioContext = global.AudioContext || MockAudioContext;
 global.webkitAudioContext = global.webkitAudioContext || MockAudioContext;
+
+// Mock HTMLMediaElement play & pause for jsdom
+window.HTMLMediaElement.prototype.play = function() {
+  return Promise.resolve();
+};
+window.HTMLMediaElement.prototype.pause = function() {};
+window.HTMLMediaElement.prototype.load = function() {};
