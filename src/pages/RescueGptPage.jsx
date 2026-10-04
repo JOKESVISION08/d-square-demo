@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from 'react';
-import { Truck, ArrowLeft, Bot, Send, ShieldAlert, MapPin, Activity, Flame, Droplets, Compass, CheckSquare, LifeBuoy, Volume2, VolumeX } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Truck, ArrowLeft, Bot, Send, ShieldAlert, MapPin, Activity, Flame, Droplets, Compass, CheckSquare, LifeBuoy, Volume2, VolumeX, Volume1, Mic, MicOff } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import RescueGptDispatchCard from '../components/RescueGptDispatchCard';
 import LiveDisasterMap from '../components/LiveDisasterMap';
 import { startContinuousSosAlarm, stopContinuousSosAlarm } from '../utils/audio';
+import { speakText, stopSpeaking, isCurrentlySpeaking, startVoiceRecognition } from '../utils/voiceAssistant';
 
 export default function RescueGptPage({ incidents = [], telemetry, activeAlert }) {
   const activeIncident = incidents.find(i => i.status === "SOS_ACTIVE") || incidents[0] || {
@@ -27,6 +28,12 @@ export default function RescueGptPage({ incidents = [], telemetry, activeAlert }
   const isDispatched = activeIncident && (activeIncident.dispatch?.rescue_gpt === "DISPATCHED" || activeIncident.status === "SOS_ACTIVE");
   const [isAlarmActive, setIsAlarmActive] = useState(false);
 
+  // Voice Assistant States
+  const [isListening, setIsListening] = useState(false);
+  const [speakingIndex, setSpeakingIndex] = useState(null);
+  const [voiceNotice, setVoiceNotice] = useState(null);
+  const recognitionRef = useRef(null);
+
   // Trigger & Control Continuous SOS Alert Sound from sossound folder
   useEffect(() => {
     if (isDispatched) {
@@ -39,6 +46,7 @@ export default function RescueGptPage({ incidents = [], telemetry, activeAlert }
 
     return () => {
       stopContinuousSosAlarm();
+      stopSpeaking();
     };
   }, [isDispatched]);
 
@@ -59,6 +67,50 @@ export default function RescueGptPage({ incidents = [], telemetry, activeAlert }
     }
   ]);
   const [inputQuery, setInputQuery] = useState("");
+
+  // Handle Speech Readout for any AI message
+  const handleReadoutMessage = (index, text) => {
+    if (speakingIndex === index) {
+      stopSpeaking();
+      setSpeakingIndex(null);
+    } else {
+      setSpeakingIndex(index);
+      speakText(
+        text,
+        () => setSpeakingIndex(null),
+        (err) => {
+          setSpeakingIndex(null);
+          setVoiceNotice("Voice readout notice: " + (err || "Unable to play voice"));
+        }
+      );
+    }
+  };
+
+  // Handle Voice Input (Speech-to-Text Microphone)
+  const toggleVoiceInput = () => {
+    if (isListening) {
+      if (recognitionRef.current) {
+        try { recognitionRef.current.stop(); } catch (e) {}
+      }
+      setIsListening(false);
+      return;
+    }
+
+    setVoiceNotice(null);
+    setIsListening(true);
+    recognitionRef.current = startVoiceRecognition({
+      onResult: (transcript) => {
+        setInputQuery(transcript);
+      },
+      onError: (err) => {
+        setIsListening(false);
+        setVoiceNotice(typeof err === 'string' ? err : "Voice recognition stopped.");
+      },
+      onEnd: () => {
+        setIsListening(false);
+      }
+    });
+  };
 
   const handleSendMessage = (textToSend) => {
     const query = textToSend || inputQuery;
@@ -82,6 +134,9 @@ export default function RescueGptPage({ incidents = [], telemetry, activeAlert }
 
     setChatMessages(prev => [...prev, userMsg, { sender: "ai", text: aiResponse }]);
     setInputQuery("");
+
+    // Read AI tactical response out loud using Voice Assistant
+    speakText(aiResponse);
   };
 
   return (
@@ -195,19 +250,52 @@ export default function RescueGptPage({ incidents = [], telemetry, activeAlert }
             <span className="text-[10px] font-mono text-slate-400">Tactical Knowledge Base v2.0</span>
           </div>
 
+          {/* Voice Notice Banner */}
+          {voiceNotice && (
+            <div className="p-2.5 rounded-lg bg-rose-950/80 border border-rose-500/40 text-rose-300 text-xs font-mono flex items-center justify-between">
+              <span>🗣️ {voiceNotice}</span>
+              <button onClick={() => setVoiceNotice(null)} className="text-slate-400 hover:text-white font-bold ml-2">✕</button>
+            </div>
+          )}
+
           <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-3 max-h-80 overflow-y-auto font-sans text-xs">
             {chatMessages.map((msg, idx) => (
               <div
                 key={idx}
-                className={`p-3 rounded-xl max-w-2xl leading-relaxed whitespace-pre-line ${
+                className={`p-3 rounded-xl max-w-2xl leading-relaxed whitespace-pre-line relative group ${
                   msg.sender === "user"
                     ? "bg-rose-950/80 border border-rose-500/40 text-rose-100 ml-auto font-mono"
                     : "bg-slate-900 border border-slate-800 text-slate-200"
                 }`}
               >
-                <strong className="block text-[10px] font-mono text-slate-400 mb-1">
-                  {msg.sender === "user" ? "FIRST RESPONDER COMMAND" : "RESCUE GPT (SAFETY PARAMETER AI)"}
-                </strong>
+                <div className="flex items-center justify-between mb-1">
+                  <strong className="block text-[10px] font-mono text-slate-400">
+                    {msg.sender === "user" ? "FIRST RESPONDER COMMAND" : "RESCUE GPT (SAFETY PARAMETER AI)"}
+                  </strong>
+                  {msg.sender !== "user" && (
+                    <button
+                      onClick={() => handleReadoutMessage(idx, msg.text)}
+                      title={speakingIndex === idx ? "Stop Voice Readout" : "Listen via Voice Assistant"}
+                      className={`px-2 py-0.5 rounded text-[10px] font-mono flex items-center gap-1 transition-colors cursor-pointer ${
+                        speakingIndex === idx
+                          ? "bg-rose-500 text-white font-bold animate-pulse"
+                          : "bg-slate-800 text-rose-300 hover:bg-slate-700"
+                      }`}
+                    >
+                      {speakingIndex === idx ? (
+                        <>
+                          <Volume2 className="w-3 h-3 text-white animate-bounce" />
+                          <span>Speaking...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Volume1 className="w-3 h-3 text-rose-400" />
+                          <span>Read Out 🔊</span>
+                        </>
+                      )}
+                    </button>
+                  )}
+                </div>
                 {msg.text}
               </div>
             ))}
@@ -242,17 +330,33 @@ export default function RescueGptPage({ incidents = [], telemetry, activeAlert }
             </button>
           </div>
 
-          {/* Chat Input Bar */}
+          {/* Chat Input Bar with Voice Input (Mic) */}
           <form
             onSubmit={(e) => { e.preventDefault(); handleSendMessage(); }}
             className="flex items-center gap-2"
           >
+            {/* Mic Voice Input Button */}
+            <button
+              type="button"
+              onClick={toggleVoiceInput}
+              title={isListening ? "Listening... Click to stop mic" : "Click to speak with Voice Assistant"}
+              className={`p-2.5 rounded-xl border flex items-center justify-center transition-all cursor-pointer ${
+                isListening
+                  ? "bg-rose-600 text-white border-rose-400 animate-pulse shadow-lg shadow-rose-600/50"
+                  : "bg-slate-900 text-rose-400 border-rose-500/40 hover:bg-rose-500/20"
+              }`}
+            >
+              {isListening ? <MicOff className="w-5 h-5 text-white animate-spin" /> : <Mic className="w-5 h-5 text-rose-400" />}
+            </button>
+
             <input
               type="text"
               value={inputQuery}
               onChange={(e) => setInputQuery(e.target.value)}
-              placeholder="Ask Rescue GPT about safety parameters, standoff distances, or PPE requirements..."
-              className="flex-1 bg-slate-950 border border-slate-800 px-4 py-2.5 rounded-xl text-xs text-slate-100 focus:outline-none focus:border-rose-500 font-mono"
+              placeholder={isListening ? "🎙️ Listening to tactical voice query... Speak now!" : "Ask Rescue GPT or tap mic to speak..."}
+              className={`flex-1 bg-slate-950 border px-4 py-2.5 rounded-xl text-xs text-slate-100 focus:outline-none transition-colors ${
+                isListening ? "border-rose-500 text-rose-200" : "border-slate-800 focus:border-rose-500"
+              }`}
             />
             <button
               type="submit"

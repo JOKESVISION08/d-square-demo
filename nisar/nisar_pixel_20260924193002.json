@@ -1,16 +1,16 @@
 {
-  "timestamp": 1790278210.155,
-  "formatted_time": "2026-09-24 19:30:11",
+  "timestamp": 1790278200.732,
+  "formatted_time": "2026-09-24 19:30:02",
   "nisar_pixels": {
     "red": 0.62,
     "green": 0.48,
     "blue": 0.35,
     "nir": 0.18,
     "swir": 0.45,
-    "thermal": 48.5,
-    "l_band_db": -14.5,
-    "s_band_db": -8.2,
-    "coherence": 0.42,
+    "thermal": 32,
+    "l_band_db": -17.7,
+    "s_band_db": -11.6,
+    "coherence": 0.33,
     "deformation_mm_yr": -34.8
   },
   "predicted_disaster": "landslide",

@@ -1,0 +1,38 @@
+{
+  "rules": {
+    "nodes": {
+      "$node_id": {
+        "telemetry": {
+          ".read": true,
+          ".write": true,
+          ".validate": "newData.hasChildren(['node_id', 'updated_at'])"
+        },
+        "hardware_alert": {
+          ".read": true,
+          ".write": true
+        },
+        "alert_history": {
+          ".read": true,
+          ".write": "auth != null"
+        }
+      }
+    },
+    "incidents": {
+      ".read": true,
+      "$incident_id": {
+        ".write": "auth != null",
+        "dispatch": {
+          ".write": "auth != null"
+        }
+      }
+    },
+    "satellite": {
+      ".read": true,
+      ".write": "auth != null"
+    },
+    "diagnostics": {
+      ".read": true,
+      ".write": true
+    }
+  }
+}

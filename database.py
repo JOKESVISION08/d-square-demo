@@ -40,9 +40,10 @@ DB_FILE = SEED_DB_FILE
 
 def get_db_connection():
     target_db = get_db_file()
-    conn = sqlite3.connect(target_db)
+    conn = sqlite3.connect(target_db, timeout=30.0)
     conn.row_factory = sqlite3.Row
     return conn
+
 
 
 def init_db():
@@ -260,9 +261,72 @@ def init_db():
     )
     """)
 
+    # Verified Incidents Table (Three-Stage Alert Workflow)
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS verified_incidents (
+        incident_id TEXT PRIMARY KEY,
+        event_id TEXT NOT NULL,
+        node_id TEXT NOT NULL,
+        disaster_type TEXT NOT NULL,
+        severity TEXT NOT NULL,
+        confidence REAL NOT NULL,
+        sensor_readings TEXT NOT NULL,
+        affected_pixels TEXT NOT NULL,
+        polygon_boundary TEXT NOT NULL,
+        latitude REAL NOT NULL,
+        longitude REAL NOT NULL,
+        location_name TEXT NOT NULL,
+        status TEXT NOT NULL DEFAULT 'HARDWARE_WARNING',
+        siren_muted INTEGER NOT NULL DEFAULT 0,
+        verification_token TEXT,
+        operator_id TEXT,
+        verification_note TEXT,
+        created_at TEXT NOT NULL,
+        confirmed_at TEXT,
+        resolved_at TEXT
+    )
+    """)
+
+    # Incident Audit Logs Table
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS incident_audit_logs (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        incident_id TEXT NOT NULL,
+        previous_state TEXT NOT NULL,
+        new_state TEXT NOT NULL,
+        operator_id TEXT NOT NULL,
+        action TEXT NOT NULL,
+        note TEXT,
+        timestamp TEXT NOT NULL,
+        metadata TEXT
+    )
+    """)
+
+    # Citizen Rescue Requests Table
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS citizen_rescue_requests (
+        request_id TEXT PRIMARY KEY,
+        incident_id TEXT,
+        user_id TEXT NOT NULL,
+        citizen_name TEXT NOT NULL,
+        phone TEXT NOT NULL,
+        latitude REAL NOT NULL,
+        longitude REAL NOT NULL,
+        location_name TEXT NOT NULL,
+        trapped_count INTEGER NOT NULL DEFAULT 1,
+        medical_emergency INTEGER NOT NULL DEFAULT 0,
+        description TEXT,
+        priority TEXT NOT NULL DEFAULT 'HIGH',
+        status TEXT NOT NULL DEFAULT 'PENDING',
+        assigned_team_id TEXT,
+        created_at TEXT NOT NULL
+    )
+    """)
+
     conn.commit()
     conn.close()
     seed_default_nodes_and_users()
+
 
 
 def seed_default_nodes_and_users():
@@ -506,4 +570,265 @@ def save_sos_request(user_id: str, lat: float, lon: float, disaster_type: str) -
     return sos_id
 
 
+# ==============================================================================
+# THREE-STAGE ALERT WORKFLOW & HUMAN VERIFICATION ENGINE PERSISTENCE HELPERS
+# ==============================================================================
+
+def create_verified_incident(data: Dict[str, Any]) -> str:
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+    incident_id = data.get("incident_id") or f"INC-{datetime.now().strftime('%Y%m%d%H%M%S')}"
+    event_id = data.get("event_id") or f"EVT-{datetime.now().strftime('%Y%m%d%H%M%S')}"
+    node_id = data.get("node_id", "D-SQUARE_NODE_01")
+    disaster_type = data.get("disaster_type", "FLOOD")
+    severity = data.get("severity", "CRITICAL")
+    confidence = float(data.get("confidence", 0.95))
+    sensor_readings = json.dumps(data.get("sensor_readings", {}))
+    affected_pixels = json.dumps(data.get("affected_pixels", []))
+    polygon_boundary = json.dumps(data.get("polygon_boundary", []))
+    lat = float(data.get("latitude", 30.0668))
+    lon = float(data.get("longitude", 79.0193))
+    location_name = data.get("location_name") or data.get("location") or "Uttarakhand Slope Sector 4"
+    status = data.get("status", "HARDWARE_WARNING")
+
+    cursor.execute("""
+    INSERT OR REPLACE INTO verified_incidents (
+        incident_id, event_id, node_id, disaster_type, severity, confidence,
+        sensor_readings, affected_pixels, polygon_boundary, latitude, longitude,
+        location_name, status, siren_muted, verification_token, operator_id,
+        verification_note, created_at, confirmed_at, resolved_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?, ?, ?, ?)
+    """, (
+        incident_id, event_id, node_id, disaster_type, severity, confidence,
+        sensor_readings, affected_pixels, polygon_boundary, lat, lon,
+        location_name, status, data.get("verification_token"), data.get("operator_id"),
+        data.get("verification_note"), now_str, data.get("confirmed_at"), data.get("resolved_at")
+    ))
+
+    conn.commit()
+    conn.close()
+
+    # Log initial audit
+    log_incident_audit(
+        incident_id=incident_id,
+        previous_state="MONITORING",
+        new_state=status,
+        operator_id=data.get("operator_id", "HARDWARE_SENSOR_GATE"),
+        action="INSPECT_RAW_HARDWARE",
+        note=f"Silent raw hardware/ML alert ingested for {disaster_type} at {location_name}",
+        metadata={"event_id": event_id, "confidence": confidence}
+    )
+
+    return incident_id
+
+
+def get_verified_incident(incident_id: str) -> Optional[Dict[str, Any]]:
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM verified_incidents WHERE incident_id = ?", (incident_id,))
+    row = cursor.fetchone()
+    conn.close()
+    if not row:
+        return None
+    item = dict(row)
+    for field in ["sensor_readings", "affected_pixels", "polygon_boundary"]:
+        try:
+            item[field] = json.loads(item[field])
+        except Exception:
+            pass
+    return item
+
+
+def get_verified_incident_by_event_id(event_id: str) -> Optional[Dict[str, Any]]:
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM verified_incidents WHERE event_id = ? ORDER BY created_at DESC LIMIT 1", (event_id,))
+    row = cursor.fetchone()
+    conn.close()
+    if not row:
+        return None
+    item = dict(row)
+    for field in ["sensor_readings", "affected_pixels", "polygon_boundary"]:
+        try:
+            item[field] = json.loads(item[field])
+        except Exception:
+            pass
+    return item
+
+
+def get_active_verified_incidents(limit: int = 10) -> List[Dict[str, Any]]:
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+    SELECT * FROM verified_incidents
+    WHERE status != 'RESOLVED'
+    ORDER BY created_at DESC LIMIT ?
+    """, (limit,))
+    rows = cursor.fetchall()
+    conn.close()
+
+    result = []
+    for r in rows:
+        item = dict(r)
+        for field in ["sensor_readings", "affected_pixels", "polygon_boundary"]:
+            try:
+                item[field] = json.loads(item[field])
+            except Exception:
+                pass
+        result.append(item)
+    return result
+
+
+def update_verified_incident_state(incident_id: str, new_state: str, operator_id: str, verification_token: Optional[str] = None, note: Optional[str] = None) -> bool:
+    inc = get_verified_incident(incident_id)
+    if not inc:
+        return False
+
+    prev_state = inc.get("status", "MONITORING")
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    confirmed_at = now_str if new_state in ["SOS_CONFIRMED", "SOS_ACTIVE"] else inc.get("confirmed_at")
+    resolved_at = now_str if new_state == "RESOLVED" else inc.get("resolved_at")
+
+    token = verification_token or inc.get("verification_token")
+    op_id = operator_id or inc.get("operator_id")
+    v_note = note or inc.get("verification_note")
+
+    cursor.execute("""
+    UPDATE verified_incidents
+    SET status = ?, verification_token = ?, operator_id = ?, verification_note = ?,
+        confirmed_at = ?, resolved_at = ?
+    WHERE incident_id = ?
+    """, (new_state, token, op_id, v_note, confirmed_at, resolved_at, incident_id))
+
+    conn.commit()
+    conn.close()
+
+    log_incident_audit(
+        incident_id=incident_id,
+        previous_state=prev_state,
+        new_state=new_state,
+        operator_id=op_id,
+        action=f"TRANSITION_STATE_TO_{new_state}",
+        note=note or f"Incident state updated to {new_state}",
+        metadata={"verification_token": token}
+    )
+    return True
+
+
+def mute_incident_siren(incident_id: str, operator_id: str = "OPERATOR_LOCAL") -> bool:
+    inc = get_verified_incident(incident_id)
+    if not inc:
+        return False
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("UPDATE verified_incidents SET siren_muted = 1 WHERE incident_id = ?", (incident_id,))
+    conn.commit()
+    conn.close()
+
+    log_incident_audit(
+        incident_id=incident_id,
+        previous_state=inc.get("status", "SOS_ACTIVE"),
+        new_state=inc.get("status", "SOS_ACTIVE"),
+        operator_id=operator_id,
+        action="MUTE_SIREN",
+        note="Emergency audio siren muted locally",
+        metadata={"siren_muted": 1}
+    )
+    return True
+
+
+def log_incident_audit(incident_id: str, previous_state: str, new_state: str, operator_id: str, action: str, note: Optional[str] = None, metadata: Optional[Dict[str, Any]] = None):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    cursor.execute("""
+    INSERT INTO incident_audit_logs (incident_id, previous_state, new_state, operator_id, action, note, timestamp, metadata)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    """, (incident_id, previous_state, new_state, operator_id, action, note or "", now_str, json.dumps(metadata or {})))
+    conn.commit()
+    conn.close()
+
+
+def get_incident_audit_logs(incident_id: Optional[str] = None, limit: int = 50) -> List[Dict[str, Any]]:
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    if incident_id:
+        cursor.execute("SELECT * FROM incident_audit_logs WHERE incident_id = ? ORDER BY id DESC LIMIT ?", (incident_id, limit))
+    else:
+        cursor.execute("SELECT * FROM incident_audit_logs ORDER BY id DESC LIMIT ?", (limit,))
+    rows = cursor.fetchall()
+    conn.close()
+    result = []
+    for r in rows:
+        item = dict(r)
+        try:
+            item["metadata"] = json.loads(item["metadata"])
+        except Exception:
+            pass
+        result.append(item)
+    return result
+
+
+def create_citizen_rescue_request(req_dict: Dict[str, Any]) -> str:
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+    req_id = req_dict.get("request_id") or f"REQ-{datetime.now().strftime('%Y%m%d%H%M%S%f')}"
+
+    cursor.execute("""
+    INSERT INTO citizen_rescue_requests (
+        request_id, incident_id, user_id, citizen_name, phone, latitude, longitude,
+        location_name, trapped_count, medical_emergency, description, priority,
+        status, assigned_team_id, created_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'PENDING', ?, ?)
+    """, (
+        req_id,
+        req_dict.get("incident_id"),
+        req_dict.get("user_id", "CITIZEN_ANON"),
+        req_dict.get("citizen_name", "Anonymous Citizen"),
+        req_dict.get("phone", "+919999999999"),
+        float(req_dict.get("latitude", 30.0668)),
+        float(req_dict.get("longitude", 79.0193)),
+        req_dict.get("location_name", "Uttarakhand Sector 4"),
+        int(req_dict.get("trapped_count", 1)),
+        int(req_dict.get("medical_emergency", 0)),
+        req_dict.get("description", "Emergency rescue request from D-SQUARE GPT"),
+        req_dict.get("priority", "HIGH"),
+        req_dict.get("assigned_team_id"),
+        now_str
+    ))
+    conn.commit()
+    conn.close()
+    return req_id
+
+
+def get_citizen_rescue_requests(limit: int = 50) -> List[Dict[str, Any]]:
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM citizen_rescue_requests ORDER BY created_at DESC LIMIT ?", (limit,))
+    rows = cursor.fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+
+def resolve_all_active_verified_incidents(operator_id: str = "SYSTEM_RESET", note: str = "Reset telemetry to normal operating parameters."):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    cursor.execute("""
+    UPDATE verified_incidents
+    SET status = 'RESOLVED', resolved_at = ?
+    WHERE status != 'RESOLVED'
+    """, (now_str,))
+    conn.commit()
+    conn.close()
+
+
 init_db()
+

@@ -1,19 +1,18 @@
 {
-  "timestamp": 1790278210.155,
-  "formatted_time": "2026-09-24 19:30:11",
+  "timestamp": 1789927548.0633776,
+  "formatted_time": "2026-09-25 00:35:00",
   "nisar_pixels": {
-    "red": 0.62,
-    "green": 0.48,
-    "blue": 0.35,
+    "red": 0.6223,
+    "green": 0.4916,
+    "blue": 0.3503,
     "nir": 0.18,
     "swir": 0.45,
     "thermal": 48.5,
     "l_band_db": -14.5,
     "s_band_db": -8.2,
-    "coherence": 0.42,
-    "deformation_mm_yr": -34.8
+    "coherence": 0.42
   },
-  "predicted_disaster": "landslide",
+  "predicted_disaster": "Landslide",
   "risk_level": "HIGH",
   "confidence_percent": 92.8,
   "location": {

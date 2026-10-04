@@ -18,28 +18,43 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 function checkActiveRescueSOSAlert() {
-  fetch("/api/sos/active_parallel_alerts")
+  fetch("/api/v1/rescue-gpt/incident")
     .then((res) => res.json())
     .then((data) => {
       let alertBadge = document.getElementById("data-mode-badge");
-      if (data.status === "success" && data.count > 0) {
-        const alert = data.alerts[0];
-        const rescue = alert.rescue_payload || {};
-        const loc = rescue.location || {};
+      if (data.status === "success" && data.incident) {
+        const inc = data.incident;
+        const rescue = data.rescue_alert || {};
         
         if (alertBadge) {
-          alertBadge.className = "badge bg-danger px-3 py-2 fw-bold";
-          alertBadge.innerHTML = `<i class="fa-solid fa-triangle-exclamation me-1"></i> ACTIVE PARALLEL SOS: ${alert.disaster_type} (${alert.severity})`;
+          alertBadge.className = "badge bg-danger px-3 py-2 fw-bold me-2";
+          alertBadge.innerHTML = `<i class="fa-solid fa-triangle-exclamation me-1"></i> VERIFIED DISASTER ACTIVE: ${inc.disaster_type} (${inc.severity})`;
         }
       } else {
         if (alertBadge) {
-          alertBadge.className = "badge bg-success px-3 py-2 fw-bold";
+          alertBadge.className = "badge bg-success px-3 py-2 fw-bold me-2";
           alertBadge.innerHTML = `<i class="fa-solid fa-signal me-1"></i> RESCUE OPS ONLINE`;
         }
       }
     })
     .catch((err) => console.log("Rescue GPT alert listener:", err));
 }
+
+async function acknowledgeIncidentAlert(incidentId) {
+  try {
+    const res = await fetch(`/api/v1/incident/${incidentId}/acknowledge`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ operator_id: "RESCUE_HQ_DISPATCHER" })
+    });
+    const data = await res.json();
+    alert("✅ Incident Acknowledged! Status updated to DISPATCHED. Rescue team tracking active.");
+    checkActiveRescueSOSAlert();
+  } catch (e) {
+    alert("⚠️ Acknowledgement error: " + e.message);
+  }
+}
+
 
 function initRescueMap() {
   const mapEl = document.getElementById("rescue-map");

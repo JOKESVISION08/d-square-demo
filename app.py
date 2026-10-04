@@ -48,7 +48,11 @@ SECRET_KEY = "DSQUARE_PRODUCTION_JWT_SECRET_2026"
 from database import (
     init_db, save_sensor_log, get_historical_sensor_logs, get_active_nodes,
     save_sos_request, get_db_connection, save_parallel_sos_alert,
-    get_active_parallel_alerts, clear_all_parallel_sos_alerts, get_shelters_list, get_rescue_resources_list
+    get_active_parallel_alerts, clear_all_parallel_sos_alerts, get_shelters_list, get_rescue_resources_list,
+    create_verified_incident, get_verified_incident, get_verified_incident_by_event_id,
+    get_active_verified_incidents, update_verified_incident_state, mute_incident_siren,
+    log_incident_audit, get_incident_audit_logs, create_citizen_rescue_request, get_citizen_rescue_requests,
+    resolve_all_active_verified_incidents
 )
 from satellite.bhuvan_api import bhuvan_api
 from satellite.cloud_removal_ai import cloud_removal_model
@@ -59,7 +63,8 @@ from services.rescue_gpt_service import rescue_gpt_service
 from services.safe_zone_service import SafeZoneService
 from services.fusion_engine_service import fusion_engine_service
 from services.multi_parameter_detection import MultiParameterFusionEngine
-from services.parallel_sos_engine import parallel_sos_engine, MultiLanguageLocalization
+from services.parallel_sos_engine import parallel_sos_engine, MultiLanguageLocalization, generate_verification_token
+
 from services.geofencing_engine import SpatialGeofencingEngine, haversine_distance_km
 from services.rescue_operations_coordinator import RescueOperationsCoordinator
 from ml_pipeline.inference_engine import RealTimeInferenceEngine
@@ -106,6 +111,36 @@ latest_mobile_alert = {
 last_sos_time_by_session = {}
 last_auto_sos_time = 0
 
+def reset_to_normal_state():
+    global latest_mobile_alert, latest_sensor_data
+    resolve_all_active_verified_incidents()
+    latest_sensor_data = {
+        "node_id": "D-SQUARE_NODE_01",
+        "temperature": 26.5,
+        "humidity": 55.0,
+        "soil_moisture": 45.0,
+        "soil_raw": 850.0,
+        "mq2_gas": 0,
+        "tilt": 0,
+        "vibration": 0,
+        "flame": 0,
+        "gyro_x": 0.0,
+        "gyro_y": 0.0,
+        "gyro_z": 0.0,
+        "disaster_type": "none",
+        "scenario": "normal",
+        "timestamp": datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
+    }
+    latest_mobile_alert = {
+        "active": False,
+        "data_mode": "VERIFIED_HARDWARE",
+        "disaster_type": "None",
+        "risk_level": "NORMAL",
+        "message": "✅ Normal Condition (Hardware)",
+        "timestamp": datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ")
+    }
+    save_alert_state()
+
 def save_alert_state():
     try:
         os.makedirs(DATA_DIR, exist_ok=True)
@@ -126,12 +161,28 @@ def load_alert_state():
                     latest_mobile_alert = saved["alert"]
                 if saved and "sensor" in saved and saved["sensor"]:
                     latest_sensor_data = saved["sensor"]
+        else:
+            reset_to_normal_state()
     except Exception:
-        pass
+        reset_to_normal_state()
 
 load_alert_state()
 
+
+@app.route("/api/reset_sensor_state", methods=["GET", "POST"])
+def api_reset_sensor_state():
+    """Resets ground sensor telemetry state to NORMAL condition."""
+    reset_to_normal_state()
+    return jsonify({
+        "status": "success",
+        "message": "Ground sensor telemetry reset to NORMAL condition.",
+        "sensor": latest_sensor_data,
+        "alert": latest_mobile_alert
+    })
+
+
 # ----------------- UI Routes -----------------
+
 @app.route("/")
 def index_route():
     return render_template("index.html")
@@ -161,6 +212,11 @@ def ml_fusion_center_route():
 @app.route("/dsquare_gpt.html")
 def dsquare_gpt_route():
     return render_template("dsquare_gpt.html")
+
+@app.route("/pc_sos_alert")
+@app.route("/pc_sos_alert.html")
+def pc_sos_alert_route():
+    return render_template("pc_sos_alert.html")
 
 # ----------------- JWT Auth API -----------------
 @app.route("/api/auth/register", methods=["POST"])
@@ -209,16 +265,25 @@ def post_sensor_data():
     node_id = body.get("node_id", "D-SQUARE_NODE_01")
     temp = float(body.get("temperature", 25.0))
     hum = float(body.get("humidity", 50.0))
-    soil_raw = float(body.get("soil_raw", 850.0))
-    mq2 = int(body.get("mq2_gas", 0))
+    if "soil_raw" in body:
+        soil_raw = float(body["soil_raw"])
+        if "soil_moisture" in body:
+            soil_m = float(body["soil_moisture"])
+        else:
+            soil_m = max(0.0, min(100.0, (1023.0 - soil_raw) / 10.23))
+    elif "soil_moisture" in body:
+        soil_m = float(body["soil_moisture"])
+        soil_raw = max(0.0, min(1023.0, 1023.0 - (soil_m * 10.23)))
+    else:
+        soil_raw = 850.0
+        soil_m = 42.0
+
+    mq2 = int(body.get("mq2_gas", body.get("smoke", 0)))
+    if isinstance(mq2, float) or mq2 > 1:
+        mq2 = 1 if mq2 > 400 else 0
     tilt = int(body.get("tilt", 0))
     vibr = int(body.get("vibration", 0))
     flame = int(body.get("flame", 0))
-
-    if "soil_moisture" in body:
-        soil_m = float(body["soil_moisture"])
-    else:
-        soil_m = 88.0 if soil_raw < 800 else 42.0
 
     # Physical sensor threshold verification (prevents pin noise or stale scenario strings from sending dummy alerts)
     is_fire = (flame == 1) or (mq2 == 1 and temp > 45.0)
@@ -248,34 +313,40 @@ def post_sensor_data():
     save_sensor_log(latest_sensor_data)
 
     if is_landslide or is_fire:
+        disaster_name = "FIRE" if is_fire else "LANDSLIDE"
         latest_mobile_alert = {
             "active": True,
             "data_mode": "VERIFIED_HARDWARE",
-            "disaster_type": "Fire" if is_fire else "Landslide",
-            "risk_level": "CRITICAL",
+            "disaster_type": disaster_name.capitalize(),
+            "risk_level": "HARDWARE_WARNING",
             "soil_moisture": soil_m,
             "temperature": temp,
             "humidity": hum,
             "node_id": node_id,
             "timestamp": now_iso,
-            "message": f"🚨 CRITICAL RISK: {(scenario).upper()} detected by hardware node!"
+            "message": f"⚠️ SILENT HARDWARE WARNING: {scenario.upper()} detected by sensor node! Awaiting Operator Verification."
         }
-        # Apply a 30s cooldown for auto-telemetry SOS dispatches to prevent database flooding
-        now_ts = time.time()
-        if now_ts - last_auto_sos_time > 30:
-            last_auto_sos_time = now_ts
+        # Create silent HARDWARE_WARNING incident for PC Dashboard if no active incident exists
+        active_incs = get_active_verified_incidents()
+        if not active_incs:
             try:
-                dispatch_res = parallel_sos_engine.dispatch_parallel_sos({
-                    "disaster_type": "FIRE" if is_fire else "LANDSLIDE",
+                create_verified_incident({
+                    "event_id": f"EVT-HW-{int(time.time())}",
+                    "node_id": node_id,
+                    "disaster_type": disaster_name,
                     "severity": "CRITICAL",
+                    "confidence": 0.95,
+                    "sensor_readings": {"temp": temp, "hum": hum, "soil_raw": soil_raw, "tilt": tilt, "vibration": vibr, "flame": flame},
+                    "affected_pixels": [{"x": 100, "y": 200, "delta": 0.9}],
+                    "polygon_boundary": [{"lat": 30.0668, "lng": 79.0193}, {"lat": 30.0700, "lng": 79.0250}, {"lat": 30.0650, "lng": 79.0280}],
                     "latitude": 30.0668,
                     "longitude": 79.0193,
-                    "area_name": f"Ground Station Sector ({node_id})",
-                    "affected_population": 8500,
-                    "source": "VERIFIED_HARDWARE_SENSOR"
+                    "location_name": f"Ground Station Sector ({node_id})",
+                    "status": "HARDWARE_WARNING",
+                    "operator_id": "HARDWARE_SENSOR_GATE",
+                    "verification_note": "Silent hardware anomaly detected from telemetry stream. Awaiting human operator verification."
                 })
-                save_parallel_sos_alert(dispatch_res)
-            except Exception:
+            except Exception as e:
                 pass
     else:
         latest_mobile_alert = {
@@ -1147,8 +1218,8 @@ def api_v1_alert_status(alert_id: int):
     })
 
 
-@app.route("/api/v1/rescue-request", methods=["POST"])
-def api_v1_rescue_request():
+@app.route("/api/v1/legacy-rescue-request", methods=["POST"])
+def api_v1_legacy_rescue_request():
     """Citizen endpoint to submit 'I need help' / trapped status with coordinates."""
     data = request.get_json(silent=True) or request.form.to_dict() or {}
     user_id = data.get("user_id", "USR_CITIZEN_ANON")
@@ -1172,6 +1243,7 @@ def api_v1_rescue_request():
     )
 
     return jsonify(res)
+
 
 
 @app.route("/api/v1/nearest-shelter/<float:lat>/<float:lon>", methods=["GET"])
@@ -1558,7 +1630,385 @@ def api_sos_active_parallel_alerts():
     })
 
 
+# ==============================================================================
+# THREE-STAGE ALERT WORKFLOW & HUMAN VERIFICATION ENGINE REST ENDPOINTS
+# ==============================================================================
+
+@app.route("/api/v1/hardware-alert", methods=["POST"])
+def api_v1_hardware_alert():
+    """
+    1. Hardware & ML Fusion Layer: Silent ingest of raw hardware/ML sensor warning.
+    Does NOT trigger sirens or public alerts. Updates PC Dashboard silently.
+    """
+    data = request.get_json(silent=True) or request.form.to_dict() or {}
+    
+    event_id = data.get("event_id") or f"EVT-{datetime.now().strftime('%Y%m%d%H%M%S')}"
+    node_id = data.get("node_id", "D-SQUARE_NODE_01")
+    disaster_type = (data.get("disaster_type") or "FLOOD").upper()
+    severity = (data.get("severity") or "CRITICAL").upper()
+    confidence = float(data.get("confidence", 0.95))
+    sensor_readings = data.get("sensor_readings") or data.get("sensor_data") or {
+        "temperature": 32.5, "humidity": 88.0, "soil_moisture": 92.0, "vibration": 0.45
+    }
+    affected_pixels = data.get("affected_pixels") or [{"x": 12, "y": 45, "delta": 0.85}]
+    polygon_boundary = data.get("polygon_boundary") or [
+        {"lat": 30.0668, "lng": 79.0193}, {"lat": 30.0700, "lng": 79.0250},
+        {"lat": 30.0650, "lng": 79.0280}, {"lat": 30.0600, "lng": 79.0200}
+    ]
+    latitude = float(data.get("latitude", 30.0668))
+    longitude = float(data.get("longitude", 79.0193))
+    location_name = data.get("location_name") or data.get("location") or "Uttarakhand Slope Sector 4"
+
+    incident_dict = {
+        "event_id": event_id,
+        "node_id": node_id,
+        "disaster_type": disaster_type,
+        "severity": severity,
+        "confidence": confidence,
+        "sensor_readings": sensor_readings,
+        "affected_pixels": affected_pixels,
+        "polygon_boundary": polygon_boundary,
+        "latitude": latitude,
+        "longitude": longitude,
+        "location_name": location_name,
+        "status": "HARDWARE_WARNING",
+        "operator_id": "HARDWARE_SENSOR_GATE",
+        "verification_note": "Silent hardware anomaly detected. Awaiting operator verification."
+    }
+
+    global latest_mobile_alert
+    latest_mobile_alert = {
+        "active": True,
+        "data_mode": "VERIFIED_HARDWARE",
+        "disaster_type": disaster_type.capitalize(),
+        "risk_level": "HARDWARE_WARNING",
+        "node_id": node_id,
+        "timestamp": datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "message": f"⚠️ SILENT HARDWARE WARNING: {disaster_type} detected. Awaiting Operator Verification."
+    }
+    save_alert_state()
+
+    incident_id = create_verified_incident(incident_dict)
+
+    return jsonify({
+        "status": "HARDWARE_WARNING",
+        "message": "Silent hardware alert ingested. PC Dashboard notified silently (No Siren / No Public Alert).",
+        "incident_id": incident_id,
+        "event_id": event_id,
+        "silent": True,
+        "timestamp": datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "incident": get_verified_incident(incident_id)
+    }), 200
+
+
+@app.route("/api/v1/verify-and-trigger-sos", methods=["POST"])
+def api_v1_verify_and_trigger_sos():
+    """
+    2. Operator Verification Gate: Authorized operator reviews telemetry and clicks 'TRIGGER SOS'.
+    Generates a signed verification token and transitions state to SOS_CONFIRMED.
+    """
+    data = request.get_json(silent=True) or request.form.to_dict() or {}
+    
+    incident_id = data.get("incident_id")
+    event_id = data.get("event_id")
+    operator_id = data.get("operator_id", "OPERATOR_ADMIN_01")
+    verification_note = data.get("verification_note") or "Verified via camera feed and satellite pixel anomaly."
+    action = (data.get("action") or "CONFIRM").upper()
+
+    inc = None
+    if incident_id:
+        inc = get_verified_incident(incident_id)
+    elif event_id:
+        inc = get_verified_incident_by_event_id(event_id)
+
+    if not inc:
+        return jsonify({"status": "error", "message": "Incident not found"}), 404
+
+    target_id = inc["incident_id"]
+    now_str = datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ")
+
+    if action == "DISMISS":
+        update_verified_incident_state(target_id, "RESOLVED", operator_id, note=f"Dismissed as false positive by operator: {verification_note}")
+        return jsonify({
+            "status": "DISMISSED",
+            "message": "Incident dismissed by human operator as false positive.",
+            "incident_id": target_id,
+            "operator_id": operator_id
+        }), 200
+
+    # Generate signed verification token
+    verification_token = generate_verification_token(operator_id, inc.get("event_id", target_id), now_str)
+
+    # Transition state to SOS_CONFIRMED
+    update_verified_incident_state(
+        target_id,
+        new_state="SOS_CONFIRMED",
+        operator_id=operator_id,
+        verification_token=verification_token,
+        note=verification_note
+    )
+
+    updated_inc = get_verified_incident(target_id)
+
+    return jsonify({
+        "status": "SOS_CONFIRMED",
+        "message": "Human operator verification successful. Signed SOS token generated.",
+        "incident_id": target_id,
+        "event_id": inc.get("event_id"),
+        "verification_token": verification_token,
+        "operator_id": operator_id,
+        "confirmed_at": now_str,
+        "incident": updated_inc
+    }), 200
+
+
+@app.route("/api/v1/standalone-sos/activate", methods=["POST"])
+def api_v1_standalone_sos_activate():
+    """
+    3. Standalone SOS Center Activation: Triggers siren, loads live disaster map,
+    and initiates parallel dispatch to D-SQUARE GPT and Rescue GPT.
+    """
+    data = request.get_json(silent=True) or request.form.to_dict() or {}
+    incident_id = data.get("incident_id")
+    event_id = data.get("event_id")
+
+    inc = None
+    if incident_id:
+        inc = get_verified_incident(incident_id)
+    elif event_id:
+        inc = get_verified_incident_by_event_id(event_id)
+
+    if not inc:
+        # Auto-create if direct standalone invocation
+        temp_dict = {
+            "disaster_type": data.get("disaster_type", "FLOOD"),
+            "severity": data.get("severity", "CRITICAL"),
+            "latitude": data.get("latitude", 30.0668),
+            "longitude": data.get("longitude", 79.0193),
+            "status": "SOS_CONFIRMED",
+            "operator_id": data.get("operator_id", "OPERATOR_ADMIN_01"),
+            "verification_token": generate_verification_token("OPERATOR_ADMIN_01", "EVT-AUTO", datetime.now().isoformat())
+        }
+        inc_id = create_verified_incident(temp_dict)
+        inc = get_verified_incident(inc_id)
+
+    target_id = inc["incident_id"]
+
+    # Update state to SOS_ACTIVE & enable siren
+    update_verified_incident_state(target_id, "SOS_ACTIVE", inc.get("operator_id", "OPERATOR_ADMIN_01"))
+
+    # Fire parallel SOS dispatch to D-SQUARE GPT & Rescue GPT
+    dispatch_res = parallel_sos_engine.dispatch_parallel_sos({
+        "disaster_type": inc["disaster_type"],
+        "severity": inc["severity"],
+        "latitude": inc["latitude"],
+        "longitude": inc["longitude"],
+        "area_name": inc["location_name"],
+        "affected_population": len(inc.get("affected_pixels", [])) * 50 + 500,
+        "sensor_data": inc.get("sensor_readings", {}),
+        "source": "THREE_STAGE_HUMAN_VERIFIED_ENGINE"
+    })
+
+    save_parallel_sos_alert(dispatch_res)
+
+    updated_inc = get_verified_incident(target_id)
+
+    return jsonify({
+        "status": "SOS_ACTIVE",
+        "message": "Standalone SOS Center activated! Emergency siren sounding, disaster map online, parallel dispatch sent.",
+        "incident_id": target_id,
+        "siren_active": True,
+        "map_enabled": True,
+        "parallel_dispatch": dispatch_res,
+        "incident": updated_inc
+    }), 200
+
+
+@app.route("/api/v1/dsquare-gpt/incident", methods=["POST", "GET"])
+def api_v1_dsquare_gpt_incident():
+    """
+    4. D-SQUARE GPT Citizen Alert Endpoint:
+    Dispatches verified public disaster warnings, multilingual safety advisories, and emergency helpline numbers.
+    """
+    if request.method == "GET":
+        incidents = get_active_verified_incidents()
+        active_inc = incidents[0] if incidents else None
+        if not active_inc:
+            return jsonify({"status": "MONITORING", "message": "All systems normal. No active disaster warnings."})
+        
+        disaster_type = active_inc["disaster_type"]
+        public_payload = parallel_sos_engine._build_public_payload({
+            "disaster_type": disaster_type,
+            "severity": active_inc["severity"],
+            "area_name": active_inc["location_name"],
+            "latitude": active_inc["latitude"],
+            "longitude": active_inc["longitude"]
+        })
+        return jsonify({"status": "success", "incident": active_inc, "public_alert": public_payload})
+
+    data = request.get_json(silent=True) or request.form.to_dict() or {}
+    disaster_type = (data.get("disaster_type") or "FLOOD").upper()
+    
+    public_payload = parallel_sos_engine._build_public_payload(data)
+    return jsonify({
+        "status": "success",
+        "message": f"D-SQUARE GPT citizen alert broadcasted for {disaster_type}.",
+        "alert": public_payload,
+        "timestamp": datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ")
+    })
+
+
+@app.route("/api/v1/rescue-gpt/incident", methods=["POST", "GET"])
+def api_v1_rescue_gpt_incident():
+    """
+    5. Rescue GPT Disaster Management Endpoint:
+    Dispatches verified tactical alerts, responder team assignments, equipment requirements, and polygon risk maps.
+    """
+    if request.method == "GET":
+        incidents = get_active_verified_incidents()
+        active_inc = incidents[0] if incidents else None
+        if not active_inc:
+            return jsonify({"status": "MONITORING", "message": "No active rescue ops needed."})
+
+        rescue_payload = parallel_sos_engine._build_rescue_payload({
+            "disaster_type": active_inc["disaster_type"],
+            "severity": active_inc["severity"],
+            "area_name": active_inc["location_name"],
+            "latitude": active_inc["latitude"],
+            "longitude": active_inc["longitude"],
+            "sensor_data": active_inc.get("sensor_readings", {})
+        })
+        return jsonify({"status": "success", "incident": active_inc, "rescue_alert": rescue_payload})
+
+    data = request.get_json(silent=True) or request.form.to_dict() or {}
+    rescue_payload = parallel_sos_engine._build_rescue_payload(data)
+    return jsonify({
+        "status": "success",
+        "message": "Rescue GPT tactical disaster alert operationalized.",
+        "alert": rescue_payload,
+        "timestamp": datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ")
+    })
+
+
+@app.route("/api/v1/rescue-request", methods=["POST", "GET"])
+def api_v1_rescue_request():
+    """
+    6. Citizen Rescue Request Endpoint:
+    Ingests emergency requests from D-SQUARE GPT and queues them for Rescue GPT dispatch.
+    """
+    if request.method == "GET":
+        requests_list = get_citizen_rescue_requests()
+        return jsonify({"status": "success", "count": len(requests_list), "requests": requests_list})
+
+    data = request.get_json(silent=True) or request.form.to_dict() or {}
+    req_id = create_citizen_rescue_request(data)
+    
+    return jsonify({
+        "status": "REGISTERED",
+        "message": "Citizen emergency request added to high-priority rescue queue.",
+        "request_id": req_id,
+        "priority": data.get("priority", "HIGH"),
+        "timestamp": datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ")
+    }), 200
+
+
+
+
+@app.route("/api/v1/incident/<incident_id>/acknowledge", methods=["POST"])
+def api_v1_incident_acknowledge(incident_id):
+    """
+    7. Incident Acknowledgement: SOS Center / Rescue team acknowledges delivery.
+    Transitions state to DISPATCHED.
+    """
+    inc = get_verified_incident(incident_id)
+    if not inc:
+        return jsonify({"status": "error", "message": "Incident not found"}), 404
+
+    operator_id = request.get_json(silent=True, force=False) or {}
+    op_id = operator_id.get("operator_id", "RESCUE_HQ_DISPATCHER")
+
+    update_verified_incident_state(incident_id, "DISPATCHED", op_id, note="Alert delivery acknowledged by first responder team HQ.")
+
+    return jsonify({
+        "status": "DISPATCHED",
+        "message": "Incident delivery acknowledged. Rescue team tracking active.",
+        "incident_id": incident_id,
+        "acknowledged_at": datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ")
+    }), 200
+
+
+@app.route("/api/v1/incident/<incident_id>/mute-siren", methods=["POST"])
+def api_v1_incident_mute_siren(incident_id):
+    """
+    8. Mute Siren Endpoint: Silences local Standalone SOS Center siren.
+    """
+    data = request.get_json(silent=True) or {}
+    op_id = data.get("operator_id", "OPERATOR_LOCAL")
+
+    success = mute_incident_siren(incident_id, operator_id=op_id)
+    if not success:
+        return jsonify({"status": "error", "message": "Incident not found"}), 404
+
+    return jsonify({
+        "status": "success",
+        "message": "Emergency audio siren muted locally.",
+        "incident_id": incident_id,
+        "siren_muted": 1
+    }), 200
+
+
+@app.route("/api/v1/incident/<incident_id>/resolve", methods=["POST"])
+def api_v1_incident_resolve(incident_id):
+    """
+    9. Incident Resolution Endpoint: Operator resolves incident, mutes siren, and archives audit log.
+    """
+    data = request.get_json(silent=True) or request.form.to_dict() or {}
+    operator_id = data.get("operator_id", "OPERATOR_ADMIN_01")
+    resolution_note = data.get("resolution_note", "Emergency situation controlled and site cleared.")
+
+    mute_incident_siren(incident_id, operator_id=operator_id)
+    success = update_verified_incident_state(incident_id, "RESOLVED", operator_id, note=resolution_note)
+    
+    if not success:
+        return jsonify({"status": "error", "message": "Incident not found"}), 404
+
+    return jsonify({
+        "status": "RESOLVED",
+        "message": "Incident successfully resolved and archived in audit log.",
+        "incident_id": incident_id,
+        "resolved_at": datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ")
+    }), 200
+
+
+@app.route("/api/v1/incidents/active", methods=["GET"])
+def api_v1_incidents_active():
+    """
+    Returns list of active verified incidents for PC Dashboard & SOS Center.
+    """
+    incidents = get_active_verified_incidents()
+    return jsonify({
+        "status": "success",
+        "count": len(incidents),
+        "incidents": incidents
+    })
+
+
+@app.route("/api/v1/incident/<incident_id>", methods=["GET"])
+def api_v1_incident_detail(incident_id):
+    """
+    Returns detailed incident view with audit logs.
+    """
+    inc = get_verified_incident(incident_id)
+    if not inc:
+        return jsonify({"status": "error", "message": "Incident not found"}), 404
+
+    audits = get_incident_audit_logs(incident_id)
+    return jsonify({
+        "status": "success",
+        "incident": inc,
+        "audit_logs": audits
+    })
+
+
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5001, debug=True)
-
-

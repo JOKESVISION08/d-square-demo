@@ -100,12 +100,19 @@
     <div class="d-flex justify-content-between align-items-center mb-3">
       <div>
         <h4 class="fw-bold text-white mb-1"><i class="fa-solid fa-tower-broadcast me-2 text-danger"></i>PC Control Center - Parallel SOS Alert System</h4>
-        <p class="text-muted small mb-0">Select disaster map pixels or active geofence boundaries to send real-time parallel alerts to Rescue GPT and D-SQUARE GPT.</p>
+        <p class="text-muted small mb-0">Three-Stage Verified Emergency Dispatch &amp; Standalone SOS Center Control</p>
       </div>
-      <div>
-        <span class="badge bg-danger text-uppercase px-3 py-2 fs-6 fw-bold" id="sla-timer">0.0s / 30.0s SLA</span>
+      <div class="d-flex align-items-center gap-2">
+        <button id="btn-mute-siren" class="btn btn-warning btn-sm fw-bold px-3 py-2" onclick="toggleMuteSiren()">
+          <i class="fa-solid fa-volume-xmark me-1"></i> Mute Siren
+        </button>
+        <button id="btn-resolve-emergency" class="btn btn-outline-success btn-sm fw-bold px-3 py-2" onclick="resolveEmergencyIncident()">
+          <i class="fa-solid fa-circle-check me-1"></i> Stop Emergency / Resolve
+        </button>
+        <span class="badge bg-danger text-uppercase px-3 py-2 fs-6 fw-bold" id="sla-timer">0.0s / 10.0s SLA</span>
       </div>
     </div>
+
 
     <!-- Quick Preset Disaster Zone Buttons -->
     <div class="pc-card p-2 mb-3">

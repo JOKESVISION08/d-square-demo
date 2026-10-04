@@ -10,6 +10,16 @@ import time
 from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor
 from typing import Dict, Any, List
+import hmac
+import hashlib
+
+SECRET_VERIFICATION_KEY = "DSQUARE_OPERATOR_VERIFICATION_SECRET_KEY_2026"
+
+
+def generate_verification_token(operator_id: str, event_id: str, timestamp: str) -> str:
+    msg = f"{operator_id}:{event_id}:{timestamp}".encode('utf-8')
+    return f"VTK-{hmac.new(SECRET_VERIFICATION_KEY.encode('utf-8'), msg, hashlib.sha256).hexdigest()[:24].upper()}"
+
 
 
 class MultiLanguageLocalization:
