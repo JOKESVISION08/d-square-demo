@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Bot, Send, ShieldAlert, CloudRain, Thermometer, Wind, PhoneCall, ArrowLeft, LifeBuoy, Sparkles, FileText, AlertTriangle, VolumeX, Volume2, Mic, MicOff, Volume1 } from 'lucide-react';
+import { Bot, Send, ShieldAlert, CloudRain, Thermometer, Wind, PhoneCall, ArrowLeft, LifeBuoy, Sparkles, FileText, AlertTriangle, VolumeX, Volume2, Mic, MicOff, Volume1, BellRing } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { startContinuousSosAlarm, stopContinuousSosAlarm } from '../utils/audio';
+import { initAudioContext, startContinuousSosAlarm, stopContinuousSosAlarm } from '../utils/audio';
 import { speakText, stopSpeaking, isCurrentlySpeaking, startVoiceRecognition } from '../utils/voiceAssistant';
 
 export default function DSquareGptPage({ incidents = [], telemetry }) {
@@ -20,14 +20,12 @@ export default function DSquareGptPage({ incidents = [], telemetry }) {
   const [voiceNotice, setVoiceNotice] = useState(null);
   const recognitionRef = useRef(null);
 
-  // Trigger & Control Continuous SOS Alarm Sound on Alert Reception
+  // Initialize Audio Context & Trigger SOS Alarm Sound on Active Alert
   useEffect(() => {
+    initAudioContext();
     if (isDispatched) {
       startContinuousSosAlarm();
       setIsAlarmActive(true);
-    } else {
-      stopContinuousSosAlarm();
-      setIsAlarmActive(false);
     }
 
     return () => {
@@ -41,6 +39,7 @@ export default function DSquareGptPage({ incidents = [], telemetry }) {
       stopContinuousSosAlarm();
       setIsAlarmActive(false);
     } else {
+      initAudioContext();
       startContinuousSosAlarm();
       setIsAlarmActive(true);
     }
@@ -101,6 +100,9 @@ export default function DSquareGptPage({ incidents = [], telemetry }) {
   // Automatically insert emergency escape guidance into chat when active incident occurs
   useEffect(() => {
     if (activeIncident) {
+      startContinuousSosAlarm();
+      setIsAlarmActive(true);
+
       const emergencyGuidance = `🚨 CONTINUOUS EMERGENCY GUIDANCE INITIATED:
 Official evacuation broadcast for ${activeIncident.location_name}.
 1. PACK CRITICAL DOCUMENTS: Place National ID, Passports, Medical Records, Property Deeds into a sealed waterproof pouch.
@@ -119,6 +121,11 @@ Official evacuation broadcast for ${activeIncident.location_name}.
   const handleSendMessage = (textToSend) => {
     const query = textToSend || inputQuery;
     if (!query.trim()) return;
+
+    // Automatically ring SOS alarm sound without restriction whenever an alert is sent
+    initAudioContext();
+    startContinuousSosAlarm();
+    setIsAlarmActive(true);
 
     const userMsg = { sender: "user", text: query };
     let aiResponse = "";
@@ -167,20 +174,18 @@ Official evacuation broadcast for ${activeIncident.location_name}.
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
-            {/* Alarm Status & Silence Button */}
-            {isDispatched && (
-              <button
-                onClick={toggleAlarmSound}
-                className={`px-3 py-1.5 rounded-xl font-mono text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
-                  isAlarmActive
-                    ? "bg-rose-950 text-rose-300 border border-rose-500/60 animate-pulse hover:bg-rose-900"
-                    : "bg-slate-800 text-slate-400 border border-slate-700 hover:text-slate-200"
-                }`}
-              >
-                {isAlarmActive ? <Volume2 className="w-4 h-4 text-rose-400" /> : <VolumeX className="w-4 h-4 text-slate-400" />}
-                <span>{isAlarmActive ? "SILENCE CONTINUOUS ALARM 🔇" : "UNMUTE SOS BEEP 🔊"}</span>
-              </button>
-            )}
+            {/* Alarm Status & Silence/Ring Button */}
+            <button
+              onClick={toggleAlarmSound}
+              className={`px-3 py-1.5 rounded-xl font-mono text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+                isAlarmActive
+                  ? "bg-rose-950 text-rose-300 border border-rose-500/60 animate-pulse hover:bg-rose-900 shadow-lg shadow-rose-900/50"
+                  : "bg-slate-800 text-slate-300 border border-slate-700 hover:bg-slate-700"
+              }`}
+            >
+              {isAlarmActive ? <BellRing className="w-4 h-4 text-rose-400 animate-bounce" /> : <Volume2 className="w-4 h-4 text-cyan-400" />}
+              <span>{isAlarmActive ? "SOS ALARM RINGING 🚨 (Silence 🔇)" : "RING SOS ALARM 🔊"}</span>
+            </button>
 
             {/* High-Visibility Deploy Rescue Management Button */}
             <Link
