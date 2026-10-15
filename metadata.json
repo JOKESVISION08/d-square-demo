@@ -1,0 +1,7 @@
+{
+  "name": "D-SQUARE 2.0 — Multi-Modal AI Fusion & Disaster Alert Dashboard",
+  "description": "Multi-modal AI fusion and disaster alert dashboard integrating ISRO NISAR satellite telemetry, sensor grids, and automated emergency SOS dispatch.",
+  "capabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
