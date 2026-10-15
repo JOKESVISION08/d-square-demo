@@ -2,8 +2,6 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Satellite, Send, Activity, ShieldAlert, Radio, CheckCircle2, RefreshCw, Zap, MapPin, Compass, Camera, Video, Image as ImageIcon, Sparkles, X, Monitor, Download } from 'lucide-react';
 import { uploadSatelliteProductMetadata } from '../services/satelliteAdapter';
 import { downloadNisarPixelBundle } from '../utils/nisarDownloader';
-import { database } from '../firebase/config';
-import { ref, set } from 'firebase/database';
 
 export default function MobileNisarPage() {
   const [disasterType, setDisasterType] = useState("landslide");
@@ -308,14 +306,11 @@ export default function MobileNisarPage() {
     };
 
     try {
-      // 1. Upload to Firebase RTDB /satellite
+      // 1. Upload satellite product metadata (stored in standalone localStorage)
       await uploadSatelliteProductMetadata(satPayload);
+      localStorage.setItem("dsquare_standalone_nisar", JSON.stringify(nisarRawPayload));
 
-      // 2. Upload to Firebase RTDB /nisar
-      const nisarRef = ref(database, 'nisar');
-      await set(nisarRef, nisarRawPayload);
-
-      // 3. Download NISAR pixel JSON and PNG payload files into nisar folder
+      // 2. Download NISAR pixel JSON and PNG payload files into nisar folder
       downloadNisarPixelBundle(nisarRawPayload, currentImg);
 
       setTransmitSuccess(true);
