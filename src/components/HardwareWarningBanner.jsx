@@ -43,6 +43,8 @@ export default function HardwareWarningBanner({ alert, onOpenSosModal }) {
               {readings.temperature_c && <span>Temp: <strong className="text-white">{readings.temperature_c}°C</strong></span>}
               {readings.humidity_pct && <span>Hum: <strong className="text-white">{readings.humidity_pct}%</strong></span>}
               {readings.soil_moisture_pct && <span>Soil: <strong className="text-white">{readings.soil_moisture_pct}%</strong></span>}
+              {readings.water_level_m && <span>Water Level: <strong className="text-white">{readings.water_level_m}m</strong></span>}
+              {readings.rainfall_mm_h && <span>Rainfall: <strong className="text-white">{readings.rainfall_mm_h}mm/h</strong></span>}
               {readings.mq2_smoke === 1 && <span className="text-rose-400 font-bold">MQ-2 Smoke: DETECTED</span>}
               {readings.flame === 1 && <span className="text-rose-400 font-bold">IR Flame: ACTIVE</span>}
               <span className="text-amber-400 italic">| Awaiting Operator Verification</span>

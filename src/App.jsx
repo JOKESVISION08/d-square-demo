@@ -7,6 +7,7 @@ import DSquareGptPage from './pages/DSquareGptPage';
 import RescueGptPage from './pages/RescueGptPage';
 import DSquareAlertCenterPage from './pages/DSquareAlertCenterPage';
 import DiagnosticsPage from './pages/DiagnosticsPage';
+import PCDashboardPage from './pages/PCDashboardPage';
 import MobileNisarPage from './pages/MobileNisarPage';
 import LoginPage from './pages/LoginPage';
 import ProtectedRoute from './components/ProtectedRoute';
@@ -138,6 +139,11 @@ export default function App() {
                 <Route
                   path="/diagnostics"
                   element={<DiagnosticsPage currentNode={currentNode} />}
+                />
+
+                <Route
+                  path="/pc-dashboard"
+                  element={<PCDashboardPage currentNode={currentNode} />}
                 />
 
                 <Route

@@ -1,20 +1,9 @@
 /*
-  D-SQUARE 2.0 - IoT Ground Station Node Firmware
+  D-SQUARE 2.0 - IoT Ground Station Node Firmware (Direct Firebase Cloud Integration)
   Auto-Reset Alert Logic (Flame + Smoke + Soil Moisture Only)
 
-  MQ-2 logic FIXED for modules where:
-    - No smoke (clean air) => D0 = HIGH
-    - Smoke detected       => D0 = LOW
-
-  Behavior:
-    - If flame OR smoke OR soil_raw < 800:
-        • Green LED OFF
-        • Red LED ON
-        • Buzzer ON continuously
-    - When all sensors return to normal:
-        • Green LED ON
-        • Red LED OFF
-        • Buzzer OFF
+  Fixes "connection failed" errors by pushing sensor telemetry and hardware alerts
+  directly to Firebase Realtime Database REST API over secure HTTPS (port 443).
 
   Pin Mapping:
     - DHT11 Temp & Humidity      -> D5 (GPIO14)
@@ -24,8 +13,6 @@
     - Green Status LED           -> D1 (GPIO5) via 220Ω
     - Red Alert LED              -> D3 (GPIO0) via 220Ω
     - Buzzer                     -> D4 (GPIO2)
-        • Buzzer+: D4, Buzzer-: GND
-        • Red LED+: 220Ω -> D3, Red LED-: GND
 */
 
 #include <ESP8266WiFi.h>
@@ -33,14 +20,14 @@
 #include <WiFiClientSecure.h>
 #include <DHT.h>
 
-// ---------- WiFi & Server Configuration ----------
+// ---------- WiFi & Firebase Configuration ----------
 const char* ssid     = "Joke";
 const char* password = "Joke@2005";
 
-// Active Local IP Address for PC Dashboard: 10.190.219.122
-const char* localServerUrl   = "http://10.190.219.122:5001/api/sensor_data";
-const char* hardwareAlertUrl = "http://10.190.219.122:5001/api/v1/hardware-alert";
-const char* cloudflareUrl    = "https://competitors-insert-peas-above.trycloudflare.com/api/sensor_data";
+// Direct Firebase Realtime Database REST Endpoints (No local server or tunnel required)
+const char* firebaseHost = "https://d-sqaure-default-rtdb.firebaseio.com";
+const char* telemetryEndpoint = "https://d-sqaure-default-rtdb.firebaseio.com/nodes/D-SQUARE_NODE_01/telemetry.json";
+const char* hardwareAlertEndpoint = "https://d-sqaure-default-rtdb.firebaseio.com/nodes/D-SQUARE_NODE_01/hardware_alert.json";
 
 // ---------- Pin Definitions ----------
 #define DHT_PIN          14   // D5 / GPIO14
@@ -108,25 +95,21 @@ void setup() {
   pinMode(RED_LED_PIN, OUTPUT);
   pinMode(BUZZER_PIN, OUTPUT);
 
-  // Start in normal display mode
   setNormalOutputs();
-
   dht.begin();
 
   Serial.println();
   Serial.println("===============================================");
-  Serial.println("D-SQUARE 2.0: Auto-Reset Alert System");
-  Serial.println("MQ-2: HIGH = no smoke, LOW = smoke detected");
-  Serial.println("Alert: Flame OR Smoke OR Soil Raw < 800");
-  Serial.println("Normal: Green ON | Alert: Red + Buzzer ON");
+  Serial.println("D-SQUARE 2.0: Direct Firebase IoT Node Firmware");
+  Serial.println("Target: https://d-sqaure-default-rtdb.firebaseio.com");
   Serial.println("===============================================");
 
   connectToWiFi();
 }
 
-// ---------- Telemetry Send Function ----------
-void sendTelemetryToServer(float temp, float hum, int soilRaw, float soilPct,
-                           int mq2Gas, int flame, bool isAlert) {
+// ---------- Telemetry Send Function (Direct Firebase HTTPS REST API) ----------
+void sendTelemetryToFirebase(float temp, float hum, int soilRaw, float soilPct,
+                             int mq2Gas, int flame, bool isAlert) {
   if (WiFi.status() != WL_CONNECTED) {
     connectToWiFi();
     if (WiFi.status() != WL_CONNECTED) return;
@@ -141,6 +124,9 @@ void sendTelemetryToServer(float temp, float hum, int soilRaw, float soilPct,
     disasterStr = "landslide";
   }
 
+  unsigned long currentMillis = millis();
+
+  // Build Telemetry JSON Payload
   String jsonPayload = "{";
   jsonPayload += "\"node_id\":\"D-SQUARE_NODE_01\",";
   jsonPayload += "\"temperature\":" + String(isnan(temp) ? 25.0 : temp, 1) + ",";
@@ -150,75 +136,72 @@ void sendTelemetryToServer(float temp, float hum, int soilRaw, float soilPct,
   jsonPayload += "\"mq2_gas\":" + String(mq2Gas) + ",";
   jsonPayload += "\"flame\":" + String(flame) + ",";
   jsonPayload += "\"disaster_type\":\"" + disasterStr + "\",";
-  jsonPayload += "\"scenario\":\"" + scenarioStr + "\"";
+  jsonPayload += "\"scenario\":\"" + scenarioStr + "\",";
+  jsonPayload += "\"updated_at\":" + String(currentMillis);
   jsonPayload += "}";
 
-  Serial.println("\nTelemetry:");
-  Serial.println(jsonPayload);
+  Serial.println("\nPushing Telemetry to Firebase RTDB...");
 
-  // Step 1: Local HTTP telemetry
-  WiFiClient client;
-  HTTPClient http;
-  http.begin(client, localServerUrl);
-  http.addHeader("Content-Type", "application/json");
+  WiFiClientSecure secureClient;
+  secureClient.setInsecure(); // Bypass cert validation for ESP8266 HTTPS
+  HTTPClient https;
 
-  int httpCode = http.POST(jsonPayload);
+  // 1. Send Telemetry via HTTPS PUT
+  https.begin(secureClient, telemetryEndpoint);
+  https.addHeader("Content-Type", "application/json");
+  int httpCode = https.PUT(jsonPayload);
+
   if (httpCode > 0) {
-    Serial.print("Telemetry HTTP code: ");
+    Serial.print("Firebase Telemetry Success, HTTP code: ");
     Serial.println(httpCode);
   } else {
-    Serial.print("Local HTTP error: ");
-    Serial.println(http.errorToString(httpCode).c_str());
+    Serial.print("Firebase Telemetry Error: ");
+    Serial.println(https.errorToString(httpCode).c_str());
   }
-  http.end();
+  https.end();
 
-  // Step 2: Hardware alert endpoint only while a hazard exists
+  // 2. If Hazard Alert exists, push hardware alert to Firebase RTDB
   if (isAlert) {
     String hwPayload = "{";
-    hwPayload += "\"event_id\":\"EVT-HW-" + String(millis()) + "\",";
+    hwPayload += "\"event_id\":\"EVT-HW-" + String(currentMillis) + "\",";
     hwPayload += "\"node_id\":\"D-SQUARE_NODE_01\",";
     hwPayload += "\"disaster_type\":\"" + disasterStr + "\",";
+    hwPayload += "\"event_status\":\"ACTIVE\",";
     hwPayload += "\"severity\":\"CRITICAL\",";
     hwPayload += "\"confidence\":0.95,";
     hwPayload += "\"latitude\":30.0668,";
     hwPayload += "\"longitude\":79.0193,";
     hwPayload += "\"location_name\":\"Uttarakhand Slope Sector 4\",";
-    hwPayload += "\"sensor_readings\":{\"temp\":" + String(temp, 1);
-    hwPayload += ",\"hum\":" + String(hum, 1);
-    hwPayload += ",\"soil\":" + String(soilPct, 1);
+    hwPayload += "\"sensor_readings\":{\"temperature_c\":" + String(temp, 1);
+    hwPayload += ",\"humidity_pct\":" + String(hum, 1);
+    hwPayload += ",\"soil_moisture_pct\":" + String(soilPct, 1);
     hwPayload += ",\"soil_raw\":" + String(soilRaw);
-    hwPayload += ",\"mq2\":" + String(mq2Gas);
-    hwPayload += ",\"flame\":" + String(flame) + "}";
+    hwPayload += ",\"mq2_smoke\":" + String(mq2Gas);
+    hwPayload += ",\"flame\":" + String(flame) + "},";
+    hwPayload += "\"updated_at\":" + String(currentMillis);
     hwPayload += "}";
 
-    HTTPClient httpAlert;
-    httpAlert.begin(client, hardwareAlertUrl);
-    httpAlert.addHeader("Content-Type", "application/json");
-    int alertCode = httpAlert.POST(hwPayload);
+    Serial.println("Pushing Active Hardware Alert to Firebase RTDB...");
+    https.begin(secureClient, hardwareAlertEndpoint);
+    https.addHeader("Content-Type", "application/json");
+    int alertCode = https.PUT(hwPayload);
+
     if (alertCode > 0) {
-      Serial.print("Hardware alert HTTP code: ");
+      Serial.print("Firebase Hardware Alert Success, HTTP code: ");
       Serial.println(alertCode);
+    } else {
+      Serial.print("Firebase Hardware Alert Error: ");
+      Serial.println(https.errorToString(alertCode).c_str());
     }
-    httpAlert.end();
-  }
-
-  // Step 3: HTTPS fallback telemetry
-  WiFiClientSecure secureClient;
-  secureClient.setInsecure();
-
-  HTTPClient https;
-  https.begin(secureClient, cloudflareUrl);
-  https.addHeader("Content-Type", "application/json");
-  int httpsCode = https.POST(jsonPayload);
-
-  if (httpsCode > 0) {
-    Serial.print("Cloudflare HTTPS code: ");
-    Serial.println(httpsCode);
+    https.end();
   } else {
-    Serial.print("Cloudflare HTTPS error: ");
-    Serial.println(https.errorToString(httpsCode).c_str());
+    // If normal, clear or set hardware alert status to INACTIVE so warning banner clears automatically
+    String clearAlertPayload = "{\"event_status\":\"INACTIVE\",\"updated_at\":" + String(currentMillis) + "}";
+    https.begin(secureClient, hardwareAlertEndpoint);
+    https.addHeader("Content-Type", "application/json");
+    https.PUT(clearAlertPayload);
+    https.end();
   }
-  https.end();
 }
 
 // ---------- Main Loop ----------
@@ -230,14 +213,11 @@ void loop() {
   float soilMoisturePct = map(soilRaw, 1023, 0, 0, 100);
   soilMoisturePct = constrain(soilMoisturePct, 0.0, 100.0);
 
-  // Read MQ-2 digital output
+  // Read MQ-2 digital output (LOW = smoke detected)
   int mq2Raw = digitalRead(MQ2_PIN);
-  // INVERTED logic for your module:
-  //   LOW  => smoke detected
-  //   HIGH => no smoke
   int mq2Gas = (mq2Raw == LOW) ? 1 : 0;
 
-  // Flame module logic: LOW = flame detected
+  // Flame module logic (LOW = flame detected)
   int flameRaw = digitalRead(FLAME_PIN);
   int flame = (flameRaw == LOW) ? 1 : 0;
 
@@ -257,7 +237,6 @@ void loop() {
   Serial.print(" | Alert: ");
   Serial.println(isAlert ? "YES" : "NO");
 
-  // Auto-reset state: evaluated on every loop.
   if (isAlert) {
     setAlertOutputs();
     Serial.println("OUTPUT: Red ON | Buzzer ON");
@@ -266,10 +245,10 @@ void loop() {
     Serial.println("OUTPUT: Green ON | Buzzer OFF");
   }
 
-  sendTelemetryToServer(
+  sendTelemetryToFirebase(
     temperature, humidity, soilRaw, soilMoisturePct,
     mq2Gas, flame, isAlert
   );
 
-  delay(2000);
+  delay(3000);
 }

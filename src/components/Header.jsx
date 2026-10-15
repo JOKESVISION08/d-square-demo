@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { Radio, Brain, Volume2, VolumeX, LogOut, ShieldAlert, Satellite } from 'lucide-react';
+import { Radio, Brain, Volume2, VolumeX, LogOut, ShieldAlert, Satellite, Server } from 'lucide-react';
 import ConnectionStatus from './ConnectionStatus';
 import NodeSelector from './NodeSelector';
 import { getAudioMuted, setAudioMuted } from '../utils/audio';
@@ -118,18 +118,32 @@ export default function Header({
             <span>ALERT CENTER</span>
           </Link>
 
-          {/* Diagnostics Page Link (Hidden on standalone portals) */}
+          {/* Diagnostics & PC Hardware Dashboard Links (Hidden on standalone portals) */}
           {!isStandalonePortal && (
-            <Link
-              to="/diagnostics"
-              className={`px-2.5 py-1.5 rounded-lg text-xs font-mono font-bold transition-all ${
-                location.pathname === '/diagnostics'
-                  ? "bg-cyan-500 text-slate-950 shadow-md shadow-cyan-500/20"
-                  : "bg-slate-800 text-slate-300 border border-slate-700 hover:bg-slate-700"
-              }`}
-            >
-              DIAGNOSTICS
-            </Link>
+            <>
+              <Link
+                to="/pc-dashboard"
+                className={`px-2.5 py-1.5 rounded-lg text-xs font-mono font-bold flex items-center gap-1 transition-all ${
+                  location.pathname === '/pc-dashboard'
+                    ? "bg-cyan-500 text-slate-950 shadow-md shadow-cyan-500/20"
+                    : "bg-cyan-950/60 text-cyan-300 border border-cyan-500/30 hover:bg-cyan-900/50"
+                }`}
+              >
+                <Server className="w-3.5 h-3.5 text-cyan-400" />
+                <span>PC DASHBOARD</span>
+              </Link>
+
+              <Link
+                to="/diagnostics"
+                className={`px-2.5 py-1.5 rounded-lg text-xs font-mono font-bold transition-all ${
+                  location.pathname === '/diagnostics'
+                    ? "bg-cyan-500 text-slate-950 shadow-md shadow-cyan-500/20"
+                    : "bg-slate-800 text-slate-300 border border-slate-700 hover:bg-slate-700"
+                }`}
+              >
+                DIAGNOSTICS
+              </Link>
+            </>
           )}
 
           {/* Mobile NISAR Link */}
